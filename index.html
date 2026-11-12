@@ -228,21 +228,8 @@
   @keyframes bob { 50% { transform: translateY(-4px); } }
 
   /* ---------- issue routing ---------- */
-  .spark {
-    flex: none; width: 48px; height: 48px; padding: 0; cursor: pointer;
-    background: none; border: 0;
-    animation: sparkPulse 1.2s steps(4) infinite;
-  }
-  .spark svg {
-    display: block; width: 44px; height: 44px; margin: 2px;
-    filter: drop-shadow(2px 0 0 #2b2540) drop-shadow(-2px 0 0 #2b2540) drop-shadow(0 2px 0 #2b2540) drop-shadow(0 -2px 0 #2b2540);
-  }
-  .spark .mini { animation: miniBlink 1.2s steps(1) infinite; }
-  .spark .mini.b { animation-delay: .6s; }
-  .spark:hover { animation-duration: .4s; }
-  .spark:hover .star { fill: #ffe27a; }
-  @keyframes sparkPulse { 0%, 100% { transform: scale(.86); } 50% { transform: scale(1.08); } }
-  @keyframes miniBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+  .spark { flex: none; width: 48px; height: 48px; padding: 0; cursor: pointer; background: none; border: 0; }
+  .spark svg { display: block; width: 44px; height: 44px; margin: 2px; fill: #f0a020; }
   #aiPanel {
     padding: 10px 12px; background: #ece9ff; border-bottom: 4px solid var(--ink);
     font-family: 'VT323', 'Courier New', monospace; font-size: 20px; line-height: 1.15; user-select: text;
@@ -383,7 +370,7 @@
     <div class="mailbar">
       <span class="logo"><b>P</b><b>m</b><b>a</b><b>i</b><b>l</b></span>
       <span class="search">Search mail (do not actually search mail)</span>
-      <button class="spark" id="aiWrite" type="button" aria-label="Assistant"><svg viewBox="-1 -1 13 13" shape-rendering="crispEdges"><path class="star" fill="#f6b93b" d="M5 0h1v2h1v2h2v1h2v1H9v1H7v2H6v2H5V9H4V7H2V6H0V5h2V4h2V2h1z"/><rect x="4" y="4" width="3" height="3" fill="#fff6d6"/><path class="mini" fill="#f6b93b" d="M9 0h1v1h1v1h-1v1H9V2H8V1h1z"/><path class="mini b" fill="#f6b93b" d="M1 8h1v1h1v1H2v1H1v-1H0V9h1z"/></svg></button>
+      <button class="spark" id="aiWrite" type="button" aria-label="Assistant"><svg viewBox="-1 -1 13 13" shape-rendering="crispEdges"><path class="star" d="M5 0h1v2h1v2h2v1h2v1H9v1H7v2H6v2H5V9H4V7H2V6H0V5h2V4h2V2h1z"/><path class="mini" d="M9 0h1v1h1v1h-1v1H9V2H8V1h1z"/><path class="mini b" d="M1 8h1v1h1v1H2v1H1v-1H0V9h1z"/></svg></button>
     </div>
     <div class="mailmain">
       <div class="side">
@@ -421,7 +408,7 @@
     <div class="mailbar">
       <span class="logo"><b>P</b><b>m</b><b>a</b><b>i</b><b>l</b></span>
       <span class="search">Search mail</span>
-      <button class="spark" id="aiBtn" type="button" aria-label="Assistant"><svg viewBox="-1 -1 13 13" shape-rendering="crispEdges"><path class="star" fill="#f6b93b" d="M5 0h1v2h1v2h2v1h2v1H9v1H7v2H6v2H5V9H4V7H2V6H0V5h2V4h2V2h1z"/><rect x="4" y="4" width="3" height="3" fill="#fff6d6"/><path class="mini" fill="#f6b93b" d="M9 0h1v1h1v1h-1v1H9V2H8V1h1z"/><path class="mini b" fill="#f6b93b" d="M1 8h1v1h1v1H2v1H1v-1H0V9h1z"/></svg></button>
+      <button class="spark" id="aiBtn" type="button" aria-label="Assistant"><svg viewBox="-1 -1 13 13" shape-rendering="crispEdges"><path class="star" d="M5 0h1v2h1v2h2v1h2v1H9v1H7v2H6v2H5V9H4V7H2V6H0V5h2V4h2V2h1z"/><path class="mini" d="M9 0h1v1h1v1h-1v1H9V2H8V1h1z"/><path class="mini b" d="M1 8h1v1h1v1H2v1H1v-1H0V9h1z"/></svg></button>
     </div>
     <div id="aiPanel" class="hidden"></div>
     <div id="thread"></div>
