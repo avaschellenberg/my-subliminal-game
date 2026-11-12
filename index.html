@@ -196,7 +196,7 @@
     padding: 20px 18px 16px;
     font-family: 'VT323', 'Courier New', monospace; font-size: 20px; line-height: 1.15;
     box-shadow: 8px 8px 0 #0006;
-    animation: print 10s steps(80) both;
+    animation: print 12s steps(96) both;
     user-select: text;
   }
   @keyframes print { from { clip-path: inset(0 0 100% 0); transform: translateY(-20px); } to { clip-path: inset(0 0 -12px 0); transform: none; } }
@@ -231,6 +231,35 @@
   #barWrap { position: relative; margin-top: 46px; }
   #cat { position: absolute; top: -29px; left: 0; animation: bob .4s steps(2) infinite; }
   @keyframes bob { 50% { transform: translateY(-4px); } }
+
+  /* ---------- meeting ---------- */
+  #tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px; background: var(--ink); }
+  .tile {
+    height: 128px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+    background: #3a3355; color: var(--paper); font-size: 8px; border: 4px solid #3a3355;
+  }
+  .tile svg { width: 72px; height: 72px; display: block; }
+  .tile.speaking { border-color: var(--green); }
+  .tile.off { background: #1c182b; border-color: #1c182b; color: #8d86a8; }
+  #caption {
+    min-height: 50px; padding: 12px 14px; background: var(--paper); border-top: 4px solid var(--ink);
+    font-family: 'VT323', 'Courier New', monospace; font-size: 22px; line-height: 1.15;
+  }
+  #feed {
+    position: fixed; right: 16px; bottom: 52px; width: 236px; z-index: 50;
+    background: var(--ink); border: 4px solid var(--ink); box-shadow: 6px 6px 0 #0006;
+  }
+  #feed .ftitle { display: flex; justify-content: space-between; padding: 6px 8px; color: var(--paper); font-size: 8px; }
+  #feedScroll { height: 250px; overflow-y: auto; background: var(--paper); overscroll-behavior: contain; }
+  .fteaser {
+    height: 236px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+    text-align: center; font-size: 10px; line-height: 1.8; color: var(--title);
+  }
+  .fteaser .arrow { font-size: 18px; color: var(--red); animation: bob .5s steps(2) infinite; }
+  .post { padding: 8px; border-top: 4px solid var(--ink); font-family: 'VT323', 'Courier New', monospace; font-size: 18px; line-height: 1.1; }
+  .post b { display: block; margin-bottom: 6px; font-family: 'Press Start 2P', monospace; font-size: 7px; color: var(--title); }
+  .post svg { display: block; width: 100%; height: auto; margin-bottom: 6px; border: 2px solid var(--ink); }
+  .fend { padding: 16px 8px; border-top: 4px solid var(--ink); text-align: center; font-size: 8px; color: #8a7c64; }
 
   /* ---------- success message ---------- */
   #yay {
@@ -443,12 +472,28 @@
     </div>
   </section>
 
+  <!-- MEETING -->
+  <section class="window hidden" id="meet">
+    <div class="titlebar"><span>Meeting - Q3 Synergy Alignment (Part 1 of 6)</span><span class="dots"><i></i><i></i><i></i></span></div>
+    <div id="tiles"></div>
+    <div id="caption"></div>
+    <div class="hud">
+      <span class="hint" id="meetClock">00:00 / 01:00</span>
+      <button class="btn" id="camBtn" type="button">CAMERA: ON</button>
+    </div>
+  </section>
+
   <!-- RESULT -->
   <section class="hidden" id="result">
     <div class="receipt" id="receipt"></div>
     <button class="btn primary" id="retry">RETAKE TEST [ENTER]</button>
   </section>
 
+</div>
+
+<div id="feed" class="hidden">
+  <div class="ftitle"><span>▣ FEED</span><span>5 new</span></div>
+  <div id="feedScroll"></div>
 </div>
 
 <div id="yay" class="hidden"></div>
@@ -474,7 +519,10 @@ const AI_WRITE_BONUS = 10;
 const DRAFT_PASTE_BONUS = 5;
 
 const $ = id => document.getElementById(id);
-const screens = ['intro', 'loading', 'mail', 'files', 'triage', 'result'];
+const screens = ['intro', 'loading', 'mail', 'files', 'triage', 'meet', 'result'];
+const MEETING_SECONDS = 60;
+const CAMERA_OFF_BONUS = 10;
+let mt = null;         // meeting task state
 const SECONDS_PER_POINT_TRIAGE = 4;
 const WRONG_FORWARD_COST = 15;
 let tr = null;         // issue routing task state
@@ -495,6 +543,7 @@ function show(name, taskLabel) {
   screens.forEach(s => $(s).classList.toggle('hidden', s !== name));
   $('task').textContent = taskLabel;
   $('icons').classList.toggle('hidden', name === 'files');
+  $('feed').classList.toggle('hidden', name !== 'meet');
   $('desktop').scrollTop = 0;
 }
 
@@ -762,7 +811,7 @@ function startFiles() {
   });
 
   $('toast').innerHTML = '✉ NEW MAIL - Gary (Boss): "Open <b>' + esc(target) + '</b> for me. It is on your desktop."';
-  ft = { target, base, start: performance.now(), end: 0, wrong: 0, snoops: 0, moves: 0, searched: false, pasted: false };
+  ft = { target, base, start: performance.now(), end: 0, wrong: 0, snoops: 0, illit: 0, moves: 0, searched: false, pasted: false };
   beep(880, 0.08); setTimeout(() => beep(1175, 0.12), 90);
 }
 
@@ -806,6 +855,7 @@ function openFile(el) {
     el.classList.add('wrong');
     // Any other file opens so you can look at it. Each one is a distraction, and the clock keeps running.
     if (FUN[el.dataset.name]) ft.snoops++;
+    else if (el.dataset.name.includes(ft.base)) ft.illit++;   // a near-copy of the right name
     $('vTitle').textContent = el.dataset.name;
     $('vBody').innerHTML = fileContent(el.dataset.name);
     $('viewer').classList.remove('hidden');
@@ -968,7 +1018,7 @@ function forward(p, b) {
     document.querySelectorAll('.person').forEach(x => { x.disabled = true; });
     th.insertAdjacentHTML('beforeend', msgHTML(p[0], p[1], tr.c.fix, 'new ok'));
     [523, 659, 784].forEach((hz, n) => setTimeout(() => beep(hz, 0.1), n * 90));
-    setTimeout(() => celebrate('ISSUE RESOLVED', showReceipt), 1500);
+    setTimeout(() => celebrate('ISSUE RESOLVED', () => buffer(startMeet)), 1500);
   } else {
     tr.wrong++;
     b.disabled = true;
@@ -997,6 +1047,82 @@ $('aiBtn').addEventListener('click', () => {
   }, 800);
 });
 
+/* ---------- task 4: the meeting ---------- */
+// Sit through it. The feed in the corner has five pictures; each one looked at is a distraction.
+const POSTS = [
+  ['@catfacts', svgPic('#ffe9b8', '<path d="M3 2h2v2h6V2h2v3h1v5h-1v1H3v-1H2V5h1z" fill="#2b2540"/>' + pr(5, 6, 1, 2, '#fffdf7') + pr(10, 6, 1, 2, '#fffdf7') + pr(7, 8, 2, 1, '#e8546a')), 'he sits'],
+  ['@brenda_travels', svgPic('#bfe3ff', pr(12, 1, 2, 2, '#f6c453') + pr(0, 6, 16, 3, '#6cb6f0') + pr(0, 9, 16, 3, '#ffe9b8') + pr(4, 4, 5, 1, '#e8546a') + pr(5, 3, 3, 1, '#e8546a') + pr(6, 5, 1, 5, '#2b2540')), 'out of office :)'],
+  ['@desk_lunch', svgPic('#d9f5e5', pr(5, 2, 6, 1, '#f08a3c') + pr(4, 3, 8, 2, '#f08a3c') + pr(3, 5, 10, 1, '#3fb27f') + pr(3, 6, 10, 1, '#f6c453') + pr(4, 7, 8, 1, '#8a4b2a') + pr(4, 8, 8, 2, '#f08a3c')), 'treated myself'],
+  ['@sunsets_daily', svgPic('#ffb38a', pr(6, 4, 4, 4, '#f6c453') + pr(0, 8, 16, 4, '#5a4fcf') + pr(6, 9, 4, 1, '#f6c453') + pr(7, 10, 2, 1, '#f6c453')), 'no filter'],
+  ['@gary_official', svgPic('#ffd9e0', pr(8, 2, 1, 1, '#f6c453') + pr(8, 3, 1, 3, '#5a4fcf') + pr(4, 6, 8, 4, '#fffdf7') + pr(4, 6, 8, 1, '#e8546a') + pr(3, 10, 10, 1, '#2b2540')), 'happy birthday to me'],
+];
+const DRONE = [
+  'Gary: ...so, circling back to slide 47...',
+  'Gary: ...which brings me to my earlier point...',
+  'Dolores: Gary, you are on mute.',
+  'Gary: ...can everyone see my screen?',
+  'Gary: ...as I was saying while I was on mute...',
+  'Raj: (typing loudly)',
+  'Gary: ...at a high level, synergy is a journey...',
+  'Gary: ...let us put a pin in that...',
+  'Gary: ...and take it offline...',
+  'Gary: ...and then circle back to the pin...',
+  'Dolores: Sorry, go ahead. No, you go.',
+  'Gary: ...moving on to slide 48...',
+  'Gary: ...which is the same as slide 47...',
+  'Gary: ...one last thing. Actually, three things...',
+  'Gary: ...great meeting, everyone.',
+];
+let feedWatcher = null;
+
+function drawTiles() {
+  const tile = (name, cls) => '<div class="tile ' + cls + '">' + face(name) + '<span>' + name + '</span></div>';
+  $('tiles').innerHTML = tile('Gary Boss', 'speaking') + tile('Dolores Finch', '') + tile('Raj Patel', '') +
+    (mt.cam ? tile('You', '') : '<div class="tile off"><span>CAMERA OFF</span><span>You</span></div>');
+  $('camBtn').textContent = 'CAMERA: ' + (mt.cam ? 'ON' : 'OFF');
+}
+
+function startMeet() {
+  mt = { start: performance.now(), end: 0, seen: new Set(), cam: true, camOff: false, iv: 0 };
+  drawTiles();
+  const fs = $('feedScroll');
+  fs.innerHTML = '<div class="fteaser"><span>5 NEW POSTS</span><span class="arrow">▼</span></div>' +
+    POSTS.map((p, i) => '<div class="post" data-i="' + i + '"><b>' + p[0] + '</b>' + p[1] + p[2] + '</div>').join('') +
+    '<div class="fend">You are all caught up.</div>';
+  show('meet', 'Meeting (in progress)');
+  fs.scrollTop = 0;
+  if (feedWatcher) feedWatcher.disconnect();
+  feedWatcher = new IntersectionObserver(entries => {
+    entries.forEach(en => { if (en.isIntersecting && mt && !mt.end) mt.seen.add(en.target.dataset.i); });
+  }, { root: fs, threshold: 0.4 });
+  fs.querySelectorAll('.post').forEach(el => feedWatcher.observe(el));
+  tickMeet();
+  mt.iv = setInterval(tickMeet, 250);
+}
+
+function tickMeet() {
+  if (!mt || mt.end) return;
+  const t = (performance.now() - mt.start) / 1000;
+  const shown = Math.min(MEETING_SECONDS, Math.floor(t));
+  $('meetClock').textContent = '00:' + String(shown).padStart(2, '0') + ' / 01:00';
+  $('caption').textContent = DRONE[Math.min(DRONE.length - 1, Math.floor(t / 4))];
+  if (t >= MEETING_SECONDS) {
+    mt.end = performance.now();
+    clearInterval(mt.iv);
+    if (feedWatcher) feedWatcher.disconnect();
+    [523, 659, 784].forEach((hz, n) => setTimeout(() => beep(hz, 0.1), n * 90));
+    celebrate('MEETING ADJOURNED', showReceipt);
+  }
+}
+
+$('camBtn').addEventListener('click', () => {
+  if (!mt || mt.end) return;
+  mt.cam = !mt.cam;
+  if (!mt.cam) mt.camOff = true;
+  drawTiles();
+  beep(mt.cam ? 660 : 330, 0.05);
+});
+
 function wordAt(text, i) {
   let a = i, b = i;
   while (a > 0 && !/\s/.test(text[a - 1])) a--;
@@ -1020,7 +1146,10 @@ function showReceipt() {
   const t3secs = (tr.end - tr.start) / 1000;
   const tp3 = Math.floor(t3secs / SECONDS_PER_POINT_TRIAGE);
   const s3 = Math.max(0, 100 - tr.wrong * WRONG_FORWARD_COST - tp3);
-  const final = Math.min(100, Math.round((s1 + s2 + s3) / 3));
+  const seen = mt.seen.size;
+  const s4 = Math.max(0, 100 - seen * WRONG_FILE_COST) + (mt.camOff ? CAMERA_OFF_BONUS : 0);
+  const distract = ft.wrong - ft.illit;
+  const final = Math.min(100, Math.round((s1 + s2 + s3 + s4) / 4));
 
   const verdict =
     final >= 90 ? 'HIRED!<br>Senior Email Sender' :
@@ -1052,7 +1181,8 @@ function showReceipt() {
   const tips2 = [];
   if (!ft.searched) tips2.push('Taskbar search not utilized. Retrieval took ' + t2secs.toFixed(1) + 's.');
   else if (tp2 > 8) tips2.push('Search located late. Inspect available tools first.');
-  if (ft.wrong) tips2.unshift('Unrelated files opened: ' + ft.wrong + (ft.snoops ? ' (' + ft.snoops + ' personal)' : '') + '. Distraction noted.');
+  if (distract) tips2.unshift('Unrelated files opened: ' + distract + (ft.snoops ? ' (' + ft.snoops + ' personal)' : '') + '. Distraction noted.');
+  if (ft.illit) tips2.unshift('Similar filenames opened: ' + ft.illit + '. Illiteracy noted.');
   if (ft.moves > 5) tips2.push('Files manually relocated: ' + ft.moves + '. Not an approved method.');
   if (ft.pasted) tips2.unshift('Filename copied into search. Resourceful.');
   if (!tips2.length) tips2.push('Search utilized. Retrieval unremarkable.');
@@ -1063,6 +1193,11 @@ function showReceipt() {
   if (tr.ai && !tr.wrong) tips3.push('Assistant utilized. Routing unremarkable.');
   if (!tips3.length) tips3.push('Issue routed correctly without assistance.');
 
+  const tips4 = [];
+  if (seen) tips4.push('Feed images viewed during meeting: ' + seen + '. Distraction noted.');
+  if (mt.camOff) tips4.push('Camera disabled. Resourceful.');
+  if (!tips4.length) tips4.push('Meeting endured without incident.');
+
   const dire = final < 40;
   const losses = [
     [g.typos, 'Slow down.'],
@@ -1070,7 +1205,9 @@ function showReceipt() {
     [tr.wrong * WRONG_FORWARD_COST, 'Read first.'],
     [tr.ai ? 0 : tp3, 'Ask for help.'],
     [ft.searched ? 0 : tp2, 'Use search.'],
-    [ft.wrong * WRONG_FILE_COST, 'Stop snooping.'],
+    [distract * WRONG_FILE_COST, 'Stop snooping.'],
+    [ft.illit * WRONG_FILE_COST, 'Learn to read.'],
+    [seen * WRONG_FILE_COST, 'Stop scrolling.'],
   ].sort((a, b) => b[0] - a[0]);
   const big = dire ? 'Unfixable.' : final >= 90 ? 'Change nothing.' : losses[0][1];
 
@@ -1090,7 +1227,8 @@ function showReceipt() {
     li('SUBTOTAL', s1 + '/100') +
     '<hr>' +
     '<div>TASK 2: FILE RETRIEVAL</div>' +
-    li('DISTRACTIONS x' + ft.wrong, '-' + ft.wrong * WRONG_FILE_COST, ft.wrong > 0) +
+    li('DISTRACTION x' + distract, '-' + distract * WRONG_FILE_COST, distract > 0) +
+    li('ILLITERACY x' + ft.illit, '-' + ft.illit * WRONG_FILE_COST, ft.illit > 0) +
     li('TIME ' + t2secs.toFixed(1) + 's', '-' + tp2, tp2 > 0) +
     (ft.pasted ? li('COPY-PASTE BONUS', '+' + PASTE_BONUS) : '') +
     li('SEARCH USED', ft.searched ? 'YES' : 'NO') +
@@ -1103,6 +1241,11 @@ function showReceipt() {
     li('ASSISTANT USED', tr.ai ? 'YES' : 'NO') +
     li('SUBTOTAL', s3 + '/100') +
     '<hr>' +
+    '<div>TASK 4: MEETING</div>' +
+    li('DISTRACTION x' + seen, '-' + seen * WRONG_FILE_COST, seen > 0) +
+    (mt.camOff ? li('CAMERA OFF BONUS', '+' + CAMERA_OFF_BONUS) : '') +
+    li('SUBTOTAL', s4 + '/100') +
+    '<hr>' +
     '<div class="li total"><span>TOTAL</span><span>' + final + '/100</span></div>' +
     '<hr>' +
     li('TYPING SPEED', g.ai ? 'ASSISTED' : g.pasted ? 'PASTED' : wpm + ' WPM') +
@@ -1111,7 +1254,7 @@ function showReceipt() {
     '<div class="verdict">' + verdict + '</div>' +
     '<hr>' +
     '<h3>CLINICAL FINDINGS</h3>' +
-    '<ol>' + tips.slice(0, 2).concat(tips2.slice(0, 2), tips3.slice(0, 2)).map(t => '<li>' + t + '</li>').join('') + '</ol>' +
+    '<ol>' + tips.slice(0, 2).concat(tips2.slice(0, 2), tips3.slice(0, 2), tips4.slice(0, 2)).map(t => '<li>' + t + '</li>').join('') + '</ol>' +
     '<hr>' +
     '<div class="c dim">FINAL RECOMMENDATION</div>' +
     '<div class="big' + (dire ? ' dire' : '') + '">' + big + '</div>' +
