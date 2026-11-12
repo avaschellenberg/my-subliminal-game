@@ -229,8 +229,8 @@
 
   /* ---------- issue routing ---------- */
   .aibtn {
-    font: inherit; font-size: 12px; width: 30px; height: 30px; flex: none; padding: 0; cursor: pointer;
-    background: var(--chrome); color: var(--title);
+    font: inherit; font-size: 8px; height: 30px; flex: none; padding: 0 10px; cursor: pointer; white-space: nowrap;
+    background: #ece9ff; color: var(--title);
     border: 2px solid; border-color: var(--chrome-light) var(--chrome-dark) var(--chrome-dark) var(--chrome-light);
   }
   .aibtn:hover { background: #fff; }
@@ -411,7 +411,7 @@
     <div class="mailbar">
       <span class="logo"><b>P</b><b>m</b><b>a</b><b>i</b><b>l</b></span>
       <span class="search">Search mail</span>
-      <button class="aibtn" id="aiBtn" type="button" title="Ask PalBot" aria-label="Ask PalBot">✦</button>
+      <button class="aibtn" id="aiBtn" type="button" title="Ask PalBot" aria-label="Ask PalBot">✦ Ask AI</button>
     </div>
     <div id="aiPanel" class="hidden"></div>
     <div id="thread"></div>
@@ -438,10 +438,14 @@
 
 <script>
 const EMAILS = [
-  { to: 'all-staff@bigcorp.biz', subject: 'Re: Pancake Mix Incident',
-    body: "Dear Team,\nIt is with utmost sincerity that I apologize for the latest calf milk replacer in the pancake mix fiasco. This mistake will doubtless cost us unfathomable amounts of revenue, and we will need to cut everybody's salaries. There will be a meeting at noon discussing how mistakes like this can be avoided.\nWith deepest regret,\nManagement" },
+  { to: 'brenda@bigcorp.biz', subject: 'Re: Re: Fwd: Quarterly Synergy',
+    body: "Hi Brenda,\nPer my last email, the quarterly report is attached. Please circle back by Friday so we can align on next steps.\nBest regards,\nA Valued Employee" },
+  { to: 'all-staff@bigcorp.biz', subject: 'Fridge Etiquette (URGENT)',
+    body: "Hello Team,\nSomeone ate my labeled yogurt again. This is the third time this month. Let us touch base at 3 PM to discuss fridge boundaries.\nThanks in advance,\nA Hungry Coworker" },
+  { to: 'gary.boss@bigcorp.biz', subject: 'Quick Question (Not Quick)',
+    body: "Dear Gary,\nJust looping you in. The meeting about the meeting has moved to Tuesday. Could we take this offline and sync after lunch?\nWarm regards,\nYour Favorite Hire" },
 ];
-const SECONDS_PER_POINT = 5;
+const SECONDS_PER_POINT = 3;
 
 const $ = id => document.getElementById(id);
 const screens = ['intro', 'loading', 'mail', 'files', 'triage', 'result'];
@@ -743,51 +747,51 @@ const CASES = [
   { subject: 'Re: Re: Fwd: Expense rejected??',
     thread: [
       ['Priya Nair', 'Sales', 'My Denver trip expense was rejected. The error says COST CENTER INACTIVE. Can someone fix this?'],
-      ['Gary Boss', 'VP', 'Not me. Looping in the team.'],
-      ['Dolores Finch', 'Office Mgmt', 'Have you tried submitting it again?'],
+      ['Gary Boss', 'Exec', 'Not me. Looping in the team.'],
+      ['Dolores Finch', 'Office', 'Have you tried submitting it again?'],
       ['Priya Nair', 'Sales', 'Three times. Same error. Payday is Friday. Who owns this?']],
     people: [
-      ['Dolores Finch', 'Office Mgmt', 'Orders snacks and toner. Approves desk moves. No finance system access.'],
-      ['Raj Patel', 'IT Helpdesk', 'Resets passwords. Sets up laptops. Cannot edit finance records.'],
-      ['Wendy Cho', 'Payroll', 'Runs payroll every other Friday. Pays what Finance approves. Cannot fix expenses.'],
-      ['Tomas Reyes', 'Finance Systems', 'Maintains the chart of accounts. Activates and retires cost centers.'],
-      ['Beatrix Lund', 'Accounts Payable', 'Pays vendor invoices. Does not handle employee expenses.'],
-      ['Gary Boss', 'VP', 'Delegates. Has never opened the expense tool.']],
+      ['Dolores Finch', 'Office', 'Booked the Denver trip. Keeps everyone\'s receipts in a drawer.'],
+      ['Raj Patel', 'IT', 'Admin for the expense tool: logins, outages, error screens. Does not edit finance data.'],
+      ['Wendy Cho', 'Finance', 'Sends reimbursements out with payroll once they are approved.'],
+      ['Tomas Reyes', 'Finance', 'Keeps the general ledger tidy. Owns the list of department codes and which ones are open.'],
+      ['Beatrix Lund', 'Finance', 'Reviews and approves employee expense reports. Cannot change how they are coded.'],
+      ['Gary Boss', 'Exec', 'Signs off on budgets. Delegates everything else.']],
     answer: 'Tomas Reyes',
-    ai: 'The expense fails because its cost center is inactive. Only Finance Systems can reactivate cost centers. Forward to Tomas Reyes.',
-    fix: 'Cost center reactivated. Resubmit and it will go through.' },
+    ai: 'A cost center is a department code, and this one is closed. Tomas Reyes owns the list of codes and can reopen it. Forward to Tomas Reyes.',
+    fix: 'Found it. That code was closed by mistake. Reopened, resubmit and it will go through.' },
   { subject: 'Re: Fwd: Re: Badge not working',
     thread: [
       ['Leo Tran', 'Research', 'Since I moved teams my badge will not open the 4th floor lab. The light just blinks red.'],
-      ['Raj Patel', 'IT Helpdesk', 'Doors are not IT. Try turning the badge over?'],
-      ['Gary Boss', 'VP', 'Someone please handle.'],
-      ['Leo Tran', 'Research', 'The badge works everywhere else. I just need lab access added.']],
+      ['Raj Patel', 'IT', 'Doors are not IT. Try turning the badge over?'],
+      ['Gary Boss', 'Exec', 'Someone please handle.'],
+      ['Leo Tran', 'Research', 'The badge works everywhere else. I just need the lab.']],
     people: [
-      ['Raj Patel', 'IT Helpdesk', 'Resets passwords. Sets up laptops. Door readers are not on the IT network.'],
-      ['Dolores Finch', 'Office Mgmt', 'Prints replacement badges with your photo. Cannot change what a badge opens.'],
-      ['Hank Morales', 'Security Desk', 'Signs in visitors. Watches cameras. Read-only view of door logs.'],
-      ['Ingrid Vos', 'Facilities', 'Administers the door access system. Assigns badge permissions by team.'],
-      ['Wendy Cho', 'HR', 'Records team transfers in the HR system. No access to door systems.'],
-      ['Gary Boss', 'VP', 'Delegates. Has never held his own badge.']],
+      ['Raj Patel', 'IT', 'Manages accounts and group memberships for software. The door system is separate.'],
+      ['Dolores Finch', 'Office', 'Issues and reprints badges. A new badge copies whatever the old one could open.'],
+      ['Hank Morales', 'Security', 'Staffs the front desk. Can see who badged where. Can let you in once, with ID.'],
+      ['Ingrid Vos', 'Facilities', 'Looks after the building: leases, locks, and the list of who may enter which room.'],
+      ['Wendy Cho', 'HR', 'Processed the team transfer. Updates the org chart.'],
+      ['Gary Boss', 'Exec', 'Has a badge that opens everything. Will not lend it.']],
     answer: 'Ingrid Vos',
-    ai: 'The badge works but lacks permission for the lab. Badge permissions are assigned in the door access system. Forward to Ingrid Vos.',
-    fix: 'Lab access added to your badge. Try the door now.' },
+    ai: 'The badge itself works, so a reprint will not help. The room list still has the old team. Ingrid Vos keeps that list. Forward to Ingrid Vos.',
+    fix: 'You were still listed under your old team. Added you to the lab. Try the door now.' },
   { subject: 'Re: Re: Re: Invoice tax is wrong',
     thread: [
       ['Noor Haddad', 'Customer Success', 'A customer in Toronto was invoiced with 0% tax. They need a corrected invoice with the right Canadian rate.'],
-      ['Sam Okoro', 'Billing Support', 'I can resend it, but it will say 0% again.'],
-      ['Gary Boss', 'VP', 'Is this a legal thing? Adding everyone.'],
-      ['Noor Haddad', 'Customer Success', 'The rate itself is wrong in the system. Who can change it?']],
+      ['Sam Okoro', 'Billing', 'I can resend it, but it will say 0% again.'],
+      ['Gary Boss', 'Exec', 'Is this a legal thing? Adding everyone.'],
+      ['Noor Haddad', 'Customer Success', 'So something upstream is wrong. Who can change it?']],
     people: [
-      ['Sam Okoro', 'Billing Support', 'Resends invoices. Updates customer addresses. Cannot edit tax rates.'],
-      ['Beatrix Lund', 'Accounts Payable', 'Pays vendor invoices. Does not issue customer invoices.'],
-      ['Felix Grau', 'Legal', 'Reviews contracts and NDAs. Does not touch billing settings.'],
-      ['Yuki Tanaka', 'Tax Compliance', 'Configures tax rates by region in the billing system.'],
-      ['Raj Patel', 'IT Helpdesk', 'Resets passwords. Sets up laptops. No admin rights in billing.'],
-      ['Gary Boss', 'VP', 'Delegates. Believes tax is optional.']],
+      ['Sam Okoro', 'Billing', 'Creates and resends invoices. Uses whatever rates the system gives.'],
+      ['Beatrix Lund', 'Finance', 'Collects customer payments and chases the late ones.'],
+      ['Felix Grau', 'Legal', 'Advises on which taxes apply in which country. Has no billing login.'],
+      ['Yuki Tanaka', 'Finance', 'Files the sales tax returns. Keeps the regional rate table up to date.'],
+      ['Raj Patel', 'IT', 'Billing system admin: uptime, logins, backups. Does not change business settings.'],
+      ['Gary Boss', 'Exec', 'Believes tax is optional.']],
     answer: 'Yuki Tanaka',
-    ai: 'The tax rate is misconfigured for the region. Regional rates are set by Tax Compliance. Forward to Yuki Tanaka.',
-    fix: 'Canadian rate corrected. Billing can reissue the invoice now.' },
+    ai: 'Invoices copy the rate from the regional rate table, and the Canada entry is wrong. Yuki Tanaka maintains that table. Forward to Yuki Tanaka.',
+    fix: 'The Ontario row was blank in the rate table. Fixed. Billing can reissue the invoice now.' },
 ];
 const NOPES = ['Not my department. Sending this back.', 'I do not have access to that. Try someone else.',
   'Wrong team, sorry!', 'Why am I on this thread?'];
