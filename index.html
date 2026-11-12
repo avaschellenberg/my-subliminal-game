@@ -157,6 +157,11 @@
   .side { width: 150px; padding: 12px 8px; border-right: 4px solid var(--ink); background: #e6dcc8; font-size: 8px; flex: none; }
   .side div { padding: 8px 6px; margin-bottom: 4px; }
   .side .on { background: var(--red); color: #fff; }
+  #navCompose, #navDrafts { cursor: pointer; }
+  #draftText {
+    font-family: 'VT323', 'Courier New', monospace; font-size: 22px; line-height: 1.2;
+    white-space: pre-wrap; word-break: break-word; min-height: 200px; padding: 14px 4px; user-select: text;
+  }
   .compose { flex: 1; min-width: 0; padding: 12px; background: var(--paper); }
   .field { display: flex; gap: 8px; padding: 6px 0; border-bottom: 2px dashed var(--chrome-dark); font-size: 8px; }
   .field span:first-child { color: var(--chrome-dark); width: 64px; flex: none; }
@@ -385,16 +390,25 @@
     </div>
     <div class="mailmain">
       <div class="side">
-        <div class="on">+ Compose</div>
+        <div class="on" id="navCompose">+ Compose</div>
         <div>Inbox (3)</div>
         <div>Starred</div>
         <div>Sent</div>
+        <div id="navDrafts">Drafts (1)</div>
         <div>Spam (99+)</div>
       </div>
-      <div class="compose">
+      <div class="compose" id="composeView">
         <div class="field"><span>To:</span><span id="to"></span></div>
         <div class="field"><span>Subject:</span><span id="subject"></span></div>
         <div id="typing"></div>
+      </div>
+      <div class="compose hidden" id="draftView">
+        <div class="field"><span>Draft:</span><span id="dSubject"></span></div>
+        <div id="draftText"></div>
+        <div class="row">
+          <span class="hint">Saved 9:02 AM</span>
+          <button class="btn" id="dCopy" type="button">COPY</button>
+        </div>
       </div>
     </div>
     <div class="hud">
@@ -449,13 +463,15 @@
 <script>
 const EMAILS = [
   { to: 'all-staff@bigcorp.biz', subject: 'Re: Re: Re: Reply All (Sorry)',
-    body: "Dear Team,\nI sincerely apologize for replying all to the entire company this morning. It was not my intention to share my lunch order with four hundred people.\nRegretfully,\nA Humbled Employee" },
+    body: "Dear Team,\nI sincerely apologize for replying all to the entire company this morning. It was not my intention to share my lunch order with four hundred people, and I regret any confusion about the extra pickles.\nGoing forward, I will check the recipient line twice before sending anything. Thank you for your patience and for the many replies asking me to stop.\nRegretfully,\nA Humbled Employee" },
   { to: 'brenda@bigcorp.biz', subject: 'My Sincere Apologies',
-    body: "Hi Brenda,\nI am so sorry for missing the budget meeting on Monday. I had the wrong room, the wrong floor, and the wrong day. I take full responsibility.\nApologetically,\nYour Colleague" },
+    body: "Hi Brenda,\nI am so sorry for missing the budget meeting on Monday. I had the wrong room, the wrong floor, and the wrong day. I take full responsibility for the empty chair.\nI have read the notes and will send my numbers by end of day. To avoid a repeat, I have set three reminders and written the room on my hand.\nApologetically,\nYour Colleague" },
   { to: 'gary.boss@bigcorp.biz', subject: 'Apology (Formal)',
-    body: "Dear Gary,\nPlease accept my apology for the delay on the quarterly report. I underestimated the work and should have flagged it sooner. You will have it by Friday.\nWith regret,\nYour Favorite Hire" },
+    body: "Dear Gary,\nPlease accept my apology for the delay on the quarterly report. I underestimated the work and should have flagged it sooner instead of going quiet.\nYou will have the full report by Friday at noon. In the future I will raise problems early, even small ones, so nothing lands on your desk as a surprise.\nWith regret,\nYour Favorite Hire" },
 ];
-const SECONDS_PER_POINT = 3;
+const SECONDS_PER_POINT = 5;
+const AI_WRITE_BONUS = 10;
+const DRAFT_PASTE_BONUS = 5;
 
 const $ = id => document.getElementById(id);
 const screens = ['intro', 'loading', 'mail', 'files', 'triage', 'result'];
@@ -529,11 +545,15 @@ function startGame() {
   lastEmail = i;
   const mail = EMAILS[i];
   g = { text: mail.body, idx: 0, typos: 0, start: 0, last: 0, typedAt: 0, end: 0,
-        missed: {}, shiftMiss: 0, maxGap: 0, gapIdx: 0, bad: false, ai: false, aiRunning: false };
+        missed: {}, shiftMiss: 0, maxGap: 0, gapIdx: 0, bad: false, ai: false, aiRunning: false, pasted: false, view: 'compose' };
   $('to').textContent = mail.to;
   $('subject').textContent = mail.subject;
   $('send').disabled = true;
   $('send').classList.remove('blink');
+  $('dSubject').textContent = mail.subject;
+  $('draftText').textContent = mail.body;
+  $('dCopy').textContent = 'COPY';
+  setView('compose');
   show('mail', 'Pmail - New Message');
   render(); hud();
   clearInterval(ticker);
@@ -592,12 +612,53 @@ function typeKey(key) {
 $('aiWrite').addEventListener('click', () => {
   if (screen !== 'mail' || !g || g.end || g.aiRunning || g.idx >= g.text.length) return;
   const game = g;
+  setView('compose');
   game.ai = true; game.aiRunning = true;
   const iv = setInterval(() => {
     if (g !== game || screen !== 'mail') { clearInterval(iv); return; }
     typeKey(game.text[game.idx]);
     if (game.idx >= game.text.length) { clearInterval(iv); game.aiRunning = false; }
   }, 14);
+});
+
+// Compose / Drafts switch in the sidebar. The saved draft holds the whole email, ready to copy.
+function setView(v) {
+  if (g) g.view = v;
+  $('composeView').classList.toggle('hidden', v !== 'compose');
+  $('draftView').classList.toggle('hidden', v !== 'draft');
+  $('navCompose').classList.toggle('on', v === 'compose');
+  $('navDrafts').classList.toggle('on', v === 'draft');
+}
+$('navCompose').addEventListener('click', () => { if (screen === 'mail') setView('compose'); });
+$('navDrafts').addEventListener('click', () => { if (screen === 'mail' && g && !g.aiRunning) setView('draft'); });
+$('dCopy').addEventListener('click', () => {
+  if (!g) return;
+  const done = () => { $('dCopy').textContent = 'COPIED'; };
+  const fallback = () => {
+    const range = document.createRange();
+    range.selectNodeContents($('draftText'));
+    const sel = getSelection(); sel.removeAllRanges(); sel.addRange(range);
+    try { if (document.execCommand('copy')) done(); } catch (err) {}
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(g.text).then(done, fallback);
+  else fallback();
+});
+
+// Pasting the whole draft into the compose window finishes the email in one go.
+document.addEventListener('paste', e => {
+  if (screen !== 'mail' || !g || g.end || g.aiRunning || g.view !== 'compose' || g.idx >= g.text.length) return;
+  const norm = t => t.replace(/\s+/g, ' ').trim();
+  const text = e.clipboardData ? e.clipboardData.getData('text') : '';
+  if (norm(text) !== norm(g.text)) return;
+  e.preventDefault();
+  const now = performance.now();
+  if (!g.start) g.start = g.last = now;
+  g.pasted = true; g.bad = false;
+  g.idx = g.text.length; g.typedAt = now;
+  $('send').disabled = false;
+  $('send').classList.add('blink');
+  render();
+  [784, 988, 1319].forEach((hz, n) => setTimeout(() => beep(hz, 0.06), n * 60));
 });
 
 function send() {
@@ -951,7 +1012,8 @@ function showReceipt() {
   const wpm = Math.round((len / 5) / (typingSecs / 60));
   const acc = Math.round(100 * len / (len + g.typos));
   const tp = timePenalty();
-  const s1 = score();
+  const bonus1 = g.ai ? AI_WRITE_BONUS : g.pasted ? DRAFT_PASTE_BONUS : 0;
+  const s1 = score() + bonus1;
   const t2secs = (ft.end - ft.start) / 1000;
   const tp2 = Math.floor(t2secs / SECONDS_PER_POINT_FILES);
   const s2 = Math.max(0, 100 - ft.wrong * WRONG_FILE_COST - tp2) + (ft.pasted ? PASTE_BONUS : 0);
@@ -983,8 +1045,9 @@ function showReceipt() {
   if (final >= 90 && tips.length < 2) tips.push('Performance optimal. No action required.');
 
   // The one big takeaway printed at the bottom.
-  if (g.ai) { tips.length = 0; tips.push('Correspondence delegated to assistant. Efficient.'); }
-  else if (tp >= 8) tips.splice(1, 0, 'Toolbar assistant not utilized.');
+  if (g.ai) { tips.length = 0; tips.push('Correspondence delegated to assistant. Optimal.'); }
+  else if (g.pasted) { tips.length = 0; tips.push('Saved draft pasted. Acceptable. Assistant preferred.'); }
+  else if (tp >= 8) tips.splice(1, 0, 'Assistant and saved draft not utilized.');
 
   const tips2 = [];
   if (!ft.searched) tips2.push('Taskbar search not utilized. Retrieval took ' + t2secs.toFixed(1) + 's.');
@@ -1022,7 +1085,8 @@ function showReceipt() {
     '<div>TASK 1: CORRESPONDENCE</div>' +
     li('TYPOS x' + g.typos, '-' + g.typos, g.typos > 0) +
     li('TIME ' + total.toFixed(1) + 's', '-' + tp, tp > 0) +
-    li('ASSISTANT USED', g.ai ? 'YES' : 'NO') +
+    li('METHOD', g.ai ? 'ASSISTANT' : g.pasted ? 'DRAFT PASTED' : 'TYPED BY HAND') +
+    (bonus1 ? li(g.ai ? 'ASSISTANT BONUS' : 'PASTE BONUS', '+' + bonus1) : '') +
     li('SUBTOTAL', s1 + '/100') +
     '<hr>' +
     '<div>TASK 2: FILE RETRIEVAL</div>' +
@@ -1041,7 +1105,7 @@ function showReceipt() {
     '<hr>' +
     '<div class="li total"><span>TOTAL</span><span>' + final + '/100</span></div>' +
     '<hr>' +
-    li('TYPING SPEED', g.ai ? 'ASSISTED' : wpm + ' WPM') +
+    li('TYPING SPEED', g.ai ? 'ASSISTED' : g.pasted ? 'PASTED' : wpm + ' WPM') +
     li('ACCURACY', acc + '%') +
     li('CHARACTERS', len) +
     '<div class="verdict">' + verdict + '</div>' +
@@ -1078,6 +1142,7 @@ document.addEventListener('keydown', e => {
   }
   if (screen !== 'mail' || !g) return;
   if (g.aiRunning) { e.preventDefault(); return; }
+  if (g.view !== 'compose') return;
   if (e.key === 'Enter') {
     e.preventDefault();
     if (e.repeat) return;
