@@ -229,7 +229,7 @@
 
   /* ---------- issue routing ---------- */
   .spark {
-    font: inherit; font-size: 16px; line-height: 1; flex: none; padding: 4px; cursor: pointer;
+    font: inherit; font-size: 28px; line-height: 1; flex: none; padding: 2px 6px; cursor: pointer;
     background: none; border: 0; color: #f0a92b; text-shadow: 2px 2px 0 #2b254033;
     animation: twinkle 1.8s steps(6) infinite;
   }
@@ -459,6 +459,7 @@ const WRONG_FORWARD_COST = 15;
 let tr = null;         // issue routing task state
 const SECONDS_PER_POINT_FILES = 2;
 const WRONG_FILE_COST = 5;
+const PASTE_BONUS = 10;
 let ft = null;         // file task state
 let zTop = 1000;
 let screen = 'intro';
@@ -686,7 +687,7 @@ function startFiles() {
   });
 
   $('toast').innerHTML = '✉ NEW MAIL - Gary (Boss): "Open <b>' + esc(target) + '</b> for me. It is on your desktop."';
-  ft = { target, base, start: performance.now(), end: 0, wrong: 0, snoops: 0, moves: 0, searched: false };
+  ft = { target, base, start: performance.now(), end: 0, wrong: 0, snoops: 0, moves: 0, searched: false, pasted: false };
   beep(880, 0.08); setTimeout(() => beep(1175, 0.12), 90);
 }
 
@@ -767,6 +768,15 @@ $('search').addEventListener('input', () => {
     el.classList.toggle('hit', m);
     el.classList.toggle('dim', !!q && !m);
   });
+});
+// Bonus for copying the exact filename out of Gary's message and pasting it into search.
+$('search').addEventListener('paste', e => {
+  if (screen !== 'files' || !ft || ft.pasted) return;
+  const text = (e.clipboardData ? e.clipboardData.getData('text') : '').trim();
+  if (text === ft.target) {
+    ft.pasted = true;
+    [784, 988, 1319].forEach((hz, n) => setTimeout(() => beep(hz, 0.06), n * 60));
+  }
 });
 $('search').addEventListener('keydown', e => {
   if (e.key !== 'Enter' || screen !== 'files') return;
@@ -930,11 +940,11 @@ function showReceipt() {
   const s1 = score();
   const t2secs = (ft.end - ft.start) / 1000;
   const tp2 = Math.floor(t2secs / SECONDS_PER_POINT_FILES);
-  const s2 = Math.max(0, 100 - ft.wrong * WRONG_FILE_COST - tp2);
+  const s2 = Math.max(0, 100 - ft.wrong * WRONG_FILE_COST - tp2) + (ft.pasted ? PASTE_BONUS : 0);
   const t3secs = (tr.end - tr.start) / 1000;
   const tp3 = Math.floor(t3secs / SECONDS_PER_POINT_TRIAGE);
   const s3 = Math.max(0, 100 - tr.wrong * WRONG_FORWARD_COST - tp3);
-  const final = Math.round((s1 + s2 + s3) / 3);
+  const final = Math.min(100, Math.round((s1 + s2 + s3) / 3));
 
   const verdict =
     final >= 90 ? 'HIRED!<br>Senior Email Sender' :
@@ -967,6 +977,7 @@ function showReceipt() {
   else if (tp2 > 8) tips2.push('Search located late. Inspect available tools first.');
   if (ft.wrong) tips2.unshift('Unrelated files opened: ' + ft.wrong + (ft.snoops ? ' (' + ft.snoops + ' personal)' : '') + '. Distraction noted.');
   if (ft.moves > 5) tips2.push('Files manually relocated: ' + ft.moves + '. Not an approved method.');
+  if (ft.pasted) tips2.unshift('Filename copied into search. Resourceful.');
   if (!tips2.length) tips2.push('Search utilized. Retrieval unremarkable.');
 
   const tips3 = [];
@@ -1003,6 +1014,7 @@ function showReceipt() {
     '<div>TASK 2: FILE RETRIEVAL</div>' +
     li('DISTRACTIONS x' + ft.wrong, '-' + ft.wrong * WRONG_FILE_COST, ft.wrong > 0) +
     li('TIME ' + t2secs.toFixed(1) + 's', '-' + tp2, tp2 > 0) +
+    (ft.pasted ? li('COPY-PASTE BONUS', '+' + PASTE_BONUS) : '') +
     li('SEARCH USED', ft.searched ? 'YES' : 'NO') +
     li('FILES MOVED', ft.moves) +
     li('SUBTOTAL', s2 + '/100') +
