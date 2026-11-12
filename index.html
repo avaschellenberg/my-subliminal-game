@@ -1132,9 +1132,8 @@ function morePosts() {
     const el = document.createElement('div');
     el.className = 'post' + (d >= 3 ? ' dark' : '');
     el.dataset.i = mt.posts++;
-    // from the third lap the pictures tilt and shift colour, more with every lap
-    const fx = d < 2 ? '' : ' style="filter:hue-rotate(' + (d - 1) * 47 + 'deg)' + (d >= 4 && i % 2 ? ' invert(1)' : '') +
-      ';transform:rotate(' + (i % 2 ? 1 : -1) * Math.min(9, (d - 1) * 2) + 'deg)' + (d >= 5 ? ' scaleX(-1)' : '') + '"';
+    // from the third lap the pictures shift colour, more with every lap (no tilting: everything stays square)
+    const fx = d < 2 ? '' : ' style="filter:hue-rotate(' + (d - 1) * 47 + 'deg)' + (d >= 4 && i % 2 ? ' invert(1)' : '') + '"';
     el.innerHTML = '<b>' + p[0] + '</b><div' + fx + '>' + p[1] + '</div>' + p[2];
     fs.appendChild(el);
     feedWatcher.observe(el);
