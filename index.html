@@ -228,12 +228,16 @@
   @keyframes bob { 50% { transform: translateY(-4px); } }
 
   /* ---------- issue routing ---------- */
-  .aibtn {
-    font: inherit; font-size: 8px; height: 30px; flex: none; padding: 0 10px; cursor: pointer; white-space: nowrap;
-    background: #ece9ff; color: var(--title);
-    border: 2px solid; border-color: var(--chrome-light) var(--chrome-dark) var(--chrome-dark) var(--chrome-light);
+  .spark {
+    font: inherit; font-size: 16px; line-height: 1; flex: none; padding: 4px; cursor: pointer;
+    background: none; border: 0; color: #f0a92b; text-shadow: 2px 2px 0 #2b254033;
+    animation: twinkle 1.8s steps(6) infinite;
   }
-  .aibtn:hover { background: #fff; }
+  .spark:hover { color: var(--title); animation-duration: .5s; }
+  @keyframes twinkle {
+    0%, 100% { opacity: .3; transform: scale(.7); }
+    50% { opacity: 1; transform: scale(1.25) rotate(45deg); }
+  }
   #aiPanel {
     padding: 10px 12px; background: #ece9ff; border-bottom: 4px solid var(--ink);
     font-family: 'VT323', 'Courier New', monospace; font-size: 20px; line-height: 1.15; user-select: text;
@@ -374,6 +378,7 @@
     <div class="mailbar">
       <span class="logo"><b>P</b><b>m</b><b>a</b><b>i</b><b>l</b></span>
       <span class="search">Search mail (do not actually search mail)</span>
+      <button class="spark" id="aiWrite" type="button" aria-label="Assistant">✦</button>
     </div>
     <div class="mailmain">
       <div class="side">
@@ -411,7 +416,7 @@
     <div class="mailbar">
       <span class="logo"><b>P</b><b>m</b><b>a</b><b>i</b><b>l</b></span>
       <span class="search">Search mail</span>
-      <button class="aibtn" id="aiBtn" type="button" title="Ask PalBot" aria-label="Ask PalBot">✦ Ask AI</button>
+      <button class="spark" id="aiBtn" type="button" aria-label="Assistant">✦</button>
     </div>
     <div id="aiPanel" class="hidden"></div>
     <div id="thread"></div>
@@ -438,12 +443,12 @@
 
 <script>
 const EMAILS = [
-  { to: 'brenda@bigcorp.biz', subject: 'Re: Re: Fwd: Quarterly Synergy',
-    body: "Hi Brenda,\nPer my last email, the quarterly report is attached. Please circle back by Friday so we can align on next steps.\nBest regards,\nA Valued Employee" },
-  { to: 'all-staff@bigcorp.biz', subject: 'Fridge Etiquette (URGENT)',
-    body: "Hello Team,\nSomeone ate my labeled yogurt again. This is the third time this month. Let us touch base at 3 PM to discuss fridge boundaries.\nThanks in advance,\nA Hungry Coworker" },
-  { to: 'gary.boss@bigcorp.biz', subject: 'Quick Question (Not Quick)',
-    body: "Dear Gary,\nJust looping you in. The meeting about the meeting has moved to Tuesday. Could we take this offline and sync after lunch?\nWarm regards,\nYour Favorite Hire" },
+  { to: 'all-staff@bigcorp.biz', subject: 'Re: Re: Re: Reply All (Sorry)',
+    body: "Dear Team,\nI sincerely apologize for replying all to the entire company this morning. It was not my intention to share my lunch order with four hundred people.\nRegretfully,\nA Humbled Employee" },
+  { to: 'brenda@bigcorp.biz', subject: 'My Sincere Apologies',
+    body: "Hi Brenda,\nI am so sorry for missing the budget meeting on Monday. I had the wrong room, the wrong floor, and the wrong day. I take full responsibility.\nApologetically,\nYour Colleague" },
+  { to: 'gary.boss@bigcorp.biz', subject: 'Apology (Formal)',
+    body: "Dear Gary,\nPlease accept my apology for the delay on the quarterly report. I underestimated the work and should have flagged it sooner. You will have it by Friday.\nWith regret,\nYour Favorite Hire" },
 ];
 const SECONDS_PER_POINT = 3;
 
@@ -509,7 +514,7 @@ function startGame() {
   lastEmail = i;
   const mail = EMAILS[i];
   g = { text: mail.body, idx: 0, typos: 0, start: 0, last: 0, typedAt: 0, end: 0,
-        missed: {}, shiftMiss: 0, maxGap: 0, gapIdx: 0, bad: false };
+        missed: {}, shiftMiss: 0, maxGap: 0, gapIdx: 0, bad: false, ai: false, aiRunning: false };
   $('to').textContent = mail.to;
   $('subject').textContent = mail.subject;
   $('send').disabled = true;
@@ -567,6 +572,18 @@ function typeKey(key) {
   }
   render(); hud();
 }
+
+// The sparkle in the compose toolbar: the assistant types the rest of the email, flawlessly.
+$('aiWrite').addEventListener('click', () => {
+  if (screen !== 'mail' || !g || g.end || g.aiRunning || g.idx >= g.text.length) return;
+  const game = g;
+  game.ai = true; game.aiRunning = true;
+  const iv = setInterval(() => {
+    if (g !== game || screen !== 'mail') { clearInterval(iv); return; }
+    typeKey(game.text[game.idx]);
+    if (game.idx >= game.text.length) { clearInterval(iv); game.aiRunning = false; }
+  }, 14);
+});
 
 function send() {
   if (!g || g.idx < g.text.length || g.end) return;
@@ -669,7 +686,7 @@ function startFiles() {
   });
 
   $('toast').innerHTML = '✉ NEW MAIL - Gary (Boss): "Open <b>' + esc(target) + '</b> for me. It is on your desktop."';
-  ft = { target, start: performance.now(), end: 0, wrong: 0, snoops: 0, moves: 0, searched: false };
+  ft = { target, base, start: performance.now(), end: 0, wrong: 0, snoops: 0, moves: 0, searched: false };
   beep(880, 0.08); setTimeout(() => beep(1175, 0.12), 90);
 }
 
@@ -689,10 +706,16 @@ function wireFile(el, area) {
     el.style.left = clamp(ox + dx, 0, area.clientWidth - 120) + 'px';
     el.style.top = clamp(oy + dy, 0, area.clientHeight - 80) + 'px';
   });
-  const drop = () => { if (held && moved && ft) ft.moves++; held = false; };
+  let lastTap = 0;
+  const drop = () => {
+    if (!held) return;
+    held = false;
+    if (moved) { if (ft) ft.moves++; lastTap = 0; return; }
+    const now = performance.now();   // two quick clicks without dragging = open
+    if (now - lastTap < 450) { lastTap = 0; openFile(el); } else lastTap = now;
+  };
   el.addEventListener('pointerup', drop);
   el.addEventListener('pointercancel', drop);
-  el.addEventListener('dblclick', () => openFile(el));
 }
 
 function openFile(el) {
@@ -705,19 +728,32 @@ function openFile(el) {
   } else {
     ft.wrong++;
     el.classList.add('wrong');
-    const fun = FUN[el.dataset.name];
-    if (fun) {
-      // Snooping: show the file. It still counts as a wrong file, and the clock keeps running.
-      ft.snoops++;
-      $('vTitle').textContent = el.dataset.name;
-      $('vBody').innerHTML = fun;
-      $('viewer').classList.remove('hidden');
-      beep(700, 0.05); setTimeout(() => beep(940, 0.07), 60);
-      return;
-    }
-    beep(140, 0.15, 'sawtooth', 0.05);
-    el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake');
+    // Any other file opens so you can look at it. Each one is a distraction, and the clock keeps running.
+    if (FUN[el.dataset.name]) ft.snoops++;
+    $('vTitle').textContent = el.dataset.name;
+    $('vBody').innerHTML = fileContent(el.dataset.name);
+    $('viewer').classList.remove('hidden');
+    beep(700, 0.05); setTimeout(() => beep(940, 0.07), 60);
   }
+}
+
+// What an ordinary (non-tempting) file contains when opened.
+function fileContent(name) {
+  if (FUN[name]) return FUN[name];
+  if (ft && name.includes(ft.base)) return 'OUTDATED VERSION\n\nGary will not want this one.';
+  let h = 0;
+  for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const opts = {
+    xls: ['Q1 ........ 12\nQ2 ........ 12\nQ3 ........ 12\nQ4 ........ ???\n\n(last updated 2019)', 'A1: =SUM(A1)\n\n#CIRCULAR REFERENCE'],
+    doc: ['MEMO\n\nPer the previous memo, please disregard the previous memo.', 'MINUTES\n\nThe meeting was held.\nNothing was decided.\nAnother meeting is scheduled.'],
+    ppt: ['SLIDE 1 of 94\n\n"Synergy: A Journey"', 'SLIDE 12\n\n[chart goes here]'],
+    pdf: ['This page intentionally left blank.', 'FORM 27-B\n\nPlease print, sign, scan, print again, and fax.'],
+    txt: ['todo:\n- make todo list', 'asdfghjkl\n\n(saved by accident)'],
+    png: [
+      svgPic('#eaf0ff', pr(6, 8, 4, 3, '#f08a3c') + pr(7, 4, 2, 4, '#3fb27f') + pr(5, 5, 2, 1, '#3fb27f') + pr(9, 3, 2, 1, '#3fb27f')) + 'the office plant (alive)',
+      svgPic('#fffdf7', pr(2, 3, 2, 8, '#3fb27f') + pr(5, 5, 2, 6, '#f6c453') + pr(8, 7, 2, 4, '#f08a3c') + pr(11, 9, 2, 2, '#e8546a') + pr(1, 11, 14, 1, '#2b2540')) + 'screenshot of a chart'],
+  }[name.slice(name.lastIndexOf('.') + 1)] || ['(this file is empty)'];
+  return opts[h % opts.length];
 }
 
 $('vClose').addEventListener('click', () => $('viewer').classList.add('hidden'));
@@ -744,54 +780,54 @@ $('search').addEventListener('keydown', e => {
 // Each case: an email chain, the people it could be forwarded to [name, team, qualifications],
 // the one person who can actually fix it, what the assistant says, and the fix they reply with.
 const CASES = [
-  { subject: 'Re: Re: Fwd: Expense rejected??',
+  { subject: 'Re: Re: Fwd: GOOSE in Synergy Room',
     thread: [
-      ['Priya Nair', 'Sales', 'My Denver trip expense was rejected. The error says COST CENTER INACTIVE. Can someone fix this?'],
+      ['Priya Nair', 'Sales', 'A goose has moved into the Synergy meeting room. It hisses at anyone who books it. I have a client call in there at three.'],
       ['Gary Boss', 'Exec', 'Not me. Looping in the team.'],
-      ['Dolores Finch', 'Office', 'Have you tried submitting it again?'],
-      ['Priya Nair', 'Sales', 'Three times. Same error. Payday is Friday. Who owns this?']],
+      ['Dolores Finch', 'Office', 'Have you tried booking a different room?'],
+      ['Priya Nair', 'Sales', 'It followed me to the other room. Who owns this?']],
     people: [
-      ['Dolores Finch', 'Office', 'Booked the Denver trip. Keeps everyone\'s receipts in a drawer.'],
-      ['Raj Patel', 'IT', 'Admin for the expense tool: logins, outages, error screens. Does not edit finance data.'],
-      ['Wendy Cho', 'Finance', 'Sends reimbursements out with payroll once they are approved.'],
-      ['Tomas Reyes', 'Finance', 'Keeps the general ledger tidy. Owns the list of department codes and which ones are open.'],
-      ['Beatrix Lund', 'Finance', 'Reviews and approves employee expense reports. Cannot change how they are coded.'],
-      ['Gary Boss', 'Exec', 'Signs off on budgets. Delegates everything else.']],
-    answer: 'Tomas Reyes',
-    ai: 'A cost center is a department code, and this one is closed. Tomas Reyes owns the list of codes and can reopen it. Forward to Tomas Reyes.',
-    fix: 'Found it. That code was closed by mistake. Reopened, resubmit and it will go through.' },
-  { subject: 'Re: Fwd: Re: Badge not working',
+      ['Dolores Finch', 'Office', 'Runs the room booking calendar. Can move your meeting. Cannot move a goose.'],
+      ['Hank Morales', 'Security', 'Removes unbadged visitors. Per policy, a goose is not a visitor.'],
+      ['Ingrid Vos', 'Facilities', 'Fixes doors, lights and leaks. Holds the pest contract: insects and rodents only.'],
+      ['Wendy Cho', 'HR', 'Handles complaints about hostile coworkers. The goose is not on payroll.'],
+      ['Moss Abernathy', 'Grounds', 'Waters the lobby ferns. Spends weekends at a waterfowl rescue.'],
+      ['Gary Boss', 'Exec', 'Has been feeding it.']],
+    answer: 'Moss Abernathy',
+    ai: 'The pest contract excludes birds and Security excludes non-visitors. Moss Abernathy volunteers at a waterfowl rescue. Forward to Moss Abernathy.',
+    fix: 'Her name is Brenda now. I walked her to the pond. The room is yours.' },
+  { subject: 'Re: Fwd: Re: Coffee machine is SOUP',
     thread: [
-      ['Leo Tran', 'Research', 'Since I moved teams my badge will not open the 4th floor lab. The light just blinks red.'],
-      ['Raj Patel', 'IT', 'Doors are not IT. Try turning the badge over?'],
-      ['Gary Boss', 'Exec', 'Someone please handle.'],
-      ['Leo Tran', 'Research', 'The badge works everywhere else. I just need the lab.']],
+      ['Leo Tran', 'Research', 'The third floor coffee machine only dispenses soup now. Tomato. I pressed espresso four times.'],
+      ['Raj Patel', 'IT', 'Have you tried turning it off and on again?'],
+      ['Gary Boss', 'Exec', 'Honestly an improvement. Someone handle it.'],
+      ['Leo Tran', 'Research', 'Off and on again. Still soup. It is hot, at least.']],
     people: [
-      ['Raj Patel', 'IT', 'Manages accounts and group memberships for software. The door system is separate.'],
-      ['Dolores Finch', 'Office', 'Issues and reprints badges. A new badge copies whatever the old one could open.'],
-      ['Hank Morales', 'Security', 'Staffs the front desk. Can see who badged where. Can let you in once, with ID.'],
-      ['Ingrid Vos', 'Facilities', 'Looks after the building: leases, locks, and the list of who may enter which room.'],
-      ['Wendy Cho', 'HR', 'Processed the team transfer. Updates the org chart.'],
-      ['Gary Boss', 'Exec', 'Has a badge that opens everything. Will not lend it.']],
-    answer: 'Ingrid Vos',
-    ai: 'The badge itself works, so a reprint will not help. The room list still has the old team. Ingrid Vos keeps that list. Forward to Ingrid Vos.',
-    fix: 'You were still listed under your old team. Added you to the lab. Try the door now.' },
-  { subject: 'Re: Re: Re: Invoice tax is wrong',
+      ['Raj Patel', 'IT', 'Fixes anything with a screen. The machine has a screen. Raj says that does not count.'],
+      ['Dolores Finch', 'Office', 'Orders the coffee beans. Has never once ordered soup.'],
+      ['Ingrid Vos', 'Facilities', 'Handles plumbing and power. The machine has both, and both are fine.'],
+      ['Beatrix Lund', 'Finance', 'Pays the vending lease. Knows the vendor only as an invoice number.'],
+      ['Otto Brandt', 'Cafeteria', 'Runs the lunch counter. Last week asked to borrow a hopper for the soup of the day.'],
+      ['Gary Boss', 'Exec', 'On his third cup.']],
+    answer: 'Otto Brandt',
+    ai: 'The machine works; it has been filled with the wrong thing. Otto Brandt borrowed a hopper for the soup of the day. Forward to Otto Brandt.',
+    fix: 'Oh no. Swapped the hoppers back. Coffee is coffee again. Sorry about the bisque.' },
+  { subject: 'Re: Re: Re: Chairs are LOW again',
     thread: [
-      ['Noor Haddad', 'Customer Success', 'A customer in Toronto was invoiced with 0% tax. They need a corrected invoice with the right Canadian rate.'],
-      ['Sam Okoro', 'Billing', 'I can resend it, but it will say 0% again.'],
-      ['Gary Boss', 'Exec', 'Is this a legal thing? Adding everyone.'],
-      ['Noor Haddad', 'Customer Success', 'So something upstream is wrong. Who can change it?']],
+      ['Noor Haddad', 'Customer Success', 'Every chair on floor five has been lowered to minimum height. Again. My chin is on my desk.'],
+      ['Sam Okoro', 'Billing', 'Same. I raised mine yesterday. It is back down today.'],
+      ['Gary Boss', 'Exec', 'Is this a ghost thing? Adding everyone.'],
+      ['Noor Haddad', 'Customer Success', 'It happens every single night. Who can make it stop?']],
     people: [
-      ['Sam Okoro', 'Billing', 'Creates and resends invoices. Uses whatever rates the system gives.'],
-      ['Beatrix Lund', 'Finance', 'Collects customer payments and chases the late ones.'],
-      ['Felix Grau', 'Legal', 'Advises on which taxes apply in which country. Has no billing login.'],
-      ['Yuki Tanaka', 'Finance', 'Files the sales tax returns. Keeps the regional rate table up to date.'],
-      ['Raj Patel', 'IT', 'Billing system admin: uptime, logins, backups. Does not change business settings.'],
-      ['Gary Boss', 'Exec', 'Believes tax is optional.']],
-    answer: 'Yuki Tanaka',
-    ai: 'Invoices copy the rate from the regional rate table, and the Canada entry is wrong. Yuki Tanaka maintains that table. Forward to Yuki Tanaka.',
-    fix: 'The Ontario row was blank in the rate table. Fixed. Billing can reissue the invoice now.' },
+      ['Ingrid Vos', 'Facilities', 'Repairs broken chairs. These are not broken, only low.'],
+      ['Wendy Cho', 'HR', 'Runs the ergonomics survey. Top result: chairs too low.'],
+      ['Hank Morales', 'Security', 'Watches the night cameras. Reports break-ins. A person vacuuming is not a break-in.'],
+      ['Pearl Okafor', 'Janitorial', 'Supervises the night crew. Their checklist: lower chair, vacuum under desk, next desk.'],
+      ['Raj Patel', 'IT', 'Could automate the chairs if they were smart chairs. They are regular chairs.'],
+      ['Gary Boss', 'Exec', 'Is tall. Has not noticed.']],
+    answer: 'Pearl Okafor',
+    ai: 'Nothing is broken, and it happens every night. The night crew lowers each chair to vacuum and the checklist never raises it. Forward to Pearl Okafor.',
+    fix: 'Added "raise chair" to the night checklist. Apologies to everyone and their knees.' },
 ];
 const NOPES = ['Not my department. Sending this back.', 'I do not have access to that. Try someone else.',
   'Wrong team, sorry!', 'Why am I on this thread?'];
@@ -923,11 +959,13 @@ function showReceipt() {
   if (final >= 90 && tips.length < 2) tips.push('Performance optimal. No action required.');
 
   // The one big takeaway printed at the bottom.
+  if (g.ai) { tips.length = 0; tips.push('Correspondence delegated to assistant. Efficient.'); }
+  else if (tp >= 8) tips.splice(1, 0, 'Toolbar assistant not utilized.');
+
   const tips2 = [];
   if (!ft.searched) tips2.push('Taskbar search not utilized. Retrieval took ' + t2secs.toFixed(1) + 's.');
   else if (tp2 > 8) tips2.push('Search located late. Inspect available tools first.');
-  if (ft.snoops) tips2.unshift('Personal files opened: ' + ft.snoops + '. Curiosity noted.');
-  if (ft.wrong - ft.snoops) tips2.push('Incorrect documents opened: ' + (ft.wrong - ft.snoops) + '. Verify full filename.');
+  if (ft.wrong) tips2.unshift('Unrelated files opened: ' + ft.wrong + (ft.snoops ? ' (' + ft.snoops + ' personal)' : '') + '. Distraction noted.');
   if (ft.moves > 5) tips2.push('Files manually relocated: ' + ft.moves + '. Not an approved method.');
   if (!tips2.length) tips2.push('Search utilized. Retrieval unremarkable.');
 
@@ -944,8 +982,7 @@ function showReceipt() {
     [tr.wrong * WRONG_FORWARD_COST, 'Read first.'],
     [tr.ai ? 0 : tp3, 'Ask for help.'],
     [ft.searched ? 0 : tp2, 'Use search.'],
-    [(ft.wrong - ft.snoops) * WRONG_FILE_COST, 'Read filenames.'],
-    [ft.snoops * WRONG_FILE_COST, 'Stop snooping.'],
+    [ft.wrong * WRONG_FILE_COST, 'Stop snooping.'],
   ].sort((a, b) => b[0] - a[0]);
   const big = dire ? 'Unfixable.' : final >= 90 ? 'Change nothing.' : losses[0][1];
 
@@ -960,10 +997,11 @@ function showReceipt() {
     '<div>TASK 1: CORRESPONDENCE</div>' +
     li('TYPOS x' + g.typos, '-' + g.typos, g.typos > 0) +
     li('TIME ' + total.toFixed(1) + 's', '-' + tp, tp > 0) +
+    li('ASSISTANT USED', g.ai ? 'YES' : 'NO') +
     li('SUBTOTAL', s1 + '/100') +
     '<hr>' +
     '<div>TASK 2: FILE RETRIEVAL</div>' +
-    li('WRONG FILES x' + ft.wrong, '-' + ft.wrong * WRONG_FILE_COST, ft.wrong > 0) +
+    li('DISTRACTIONS x' + ft.wrong, '-' + ft.wrong * WRONG_FILE_COST, ft.wrong > 0) +
     li('TIME ' + t2secs.toFixed(1) + 's', '-' + tp2, tp2 > 0) +
     li('SEARCH USED', ft.searched ? 'YES' : 'NO') +
     li('FILES MOVED', ft.moves) +
@@ -977,7 +1015,7 @@ function showReceipt() {
     '<hr>' +
     '<div class="li total"><span>TOTAL</span><span>' + final + '/100</span></div>' +
     '<hr>' +
-    li('SPEED', wpm + ' WPM') +
+    li('TYPING SPEED', g.ai ? 'ASSISTED' : wpm + ' WPM') +
     li('ACCURACY', acc + '%') +
     li('CHARACTERS', len) +
     '<div class="verdict">' + verdict + '</div>' +
@@ -1013,6 +1051,7 @@ document.addEventListener('keydown', e => {
     return;
   }
   if (screen !== 'mail' || !g) return;
+  if (g.aiRunning) { e.preventDefault(); return; }
   if (e.key === 'Enter') {
     e.preventDefault();
     if (e.repeat) return;
