@@ -290,12 +290,26 @@
   }
   #toast b { color: var(--red); }
   #clutter { flex: 1; position: relative; min-height: 0; }
-  .file { position: absolute; width: 88px; text-align: center; cursor: grab; touch-action: none; }
+  #viewer {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    width: min(380px, 90%); margin: 0; z-index: 200000;
+  }
+  #vBody {
+    background: var(--paper); padding: 18px; text-align: center; white-space: pre-wrap;
+    font-family: 'VT323', 'Courier New', monospace; font-size: 22px; line-height: 1.15;
+  }
+  #vBody svg { display: block; margin: 0 auto 10px; border: 4px solid var(--ink); }
+  #vClose {
+    font: inherit; font-size: 8px; padding: 3px 6px; cursor: pointer;
+    background: var(--red); color: #fff;
+    border: 2px solid; border-color: #ff9aa9 #a12c40 #a12c40 #ff9aa9;
+  }
+  .file { position: absolute; width: 120px; text-align: center; cursor: grab; touch-action: none; }
   .file:active { cursor: grabbing; }
   .file svg { display: block; margin: 0 auto 3px; filter: drop-shadow(3px 3px 0 #2b254055); pointer-events: none; }
   .file .n {
     display: inline-block; padding: 1px 2px;
-    font-family: 'VT323', 'Courier New', monospace; font-size: 14px; line-height: 1;
+    font-family: 'VT323', 'Courier New', monospace; font-size: 18px; line-height: 1;
     color: var(--ink); background: #fffaf0ee; word-break: break-all;
   }
   .file.dim { opacity: .1; pointer-events: none; }
@@ -385,6 +399,10 @@
   <section class="hidden" id="files">
     <div id="toast"></div>
     <div id="clutter"></div>
+    <div id="viewer" class="window hidden">
+      <div class="titlebar"><span id="vTitle"></span><button id="vClose" type="button" aria-label="Close">X</button></div>
+      <div id="vBody"></div>
+    </div>
   </section>
 
   <!-- ISSUE ROUTING -->
@@ -420,14 +438,10 @@
 
 <script>
 const EMAILS = [
-  { to: 'brenda@bigcorp.biz', subject: 'Re: Re: Fwd: Quarterly Synergy',
-    body: "Hi Brenda,\nPer my last email, the quarterly report is attached. Please circle back by Friday so we can align on next steps.\nBest regards,\nA Valued Employee" },
-  { to: 'all-staff@bigcorp.biz', subject: 'Fridge Etiquette (URGENT)',
-    body: "Hello Team,\nSomeone ate my labeled yogurt again. This is the third time this month. Let us touch base at 3 PM to discuss fridge boundaries.\nThanks in advance,\nA Hungry Coworker" },
-  { to: 'gary.boss@bigcorp.biz', subject: 'Quick Question (Not Quick)',
-    body: "Dear Gary,\nJust looping you in. The meeting about the meeting has moved to Tuesday. Could we take this offline and sync after lunch?\nWarm regards,\nYour Favorite Hire" },
+  { to: 'all-staff@bigcorp.biz', subject: 'Re: Pancake Mix Incident',
+    body: "Dear Team,\nIt is with utmost sincerity that I apologize for the latest calf milk replacer in the pancake mix fiasco. This mistake will doubtless cost us unfathomable amounts of revenue, and we will need to cut everybody's salaries. There will be a meeting at noon discussing how mistakes like this can be avoided.\nWith deepest regret,\nManagement" },
 ];
-const SECONDS_PER_POINT = 3;
+const SECONDS_PER_POINT = 5;
 
 const $ = id => document.getElementById(id);
 const screens = ['intro', 'loading', 'mail', 'files', 'triage', 'result'];
@@ -487,7 +501,7 @@ function begin() { buffer(startGame); }
 
 function startGame() {
   let i;
-  do { i = Math.floor(Math.random() * EMAILS.length); } while (i === lastEmail);
+  do { i = Math.floor(Math.random() * EMAILS.length); } while (EMAILS.length > 1 && i === lastEmail);
   lastEmail = i;
   const mail = EMAILS[i];
   g = { text: mail.body, idx: 0, typos: 0, start: 0, last: 0, typedAt: 0, end: 0,
@@ -565,11 +579,34 @@ const BASES = ['Q3_Budget', 'Synergy_Deck', 'Invoice_0042', 'Meeting_Notes', 'Fr
 const SUFFIXES = ['', '_FINAL', '_final_v2', '_FINAL_v3', '_FINAL_FINAL', '_old', '_draft', '(1)', '_v7', '_REAL', '_use_this_one', '_backup'];
 const EXTS = ['.xls', '.doc', '.ppt', '.txt', '.pdf', '.png'];
 
+// Tempting personal files. Opening one shows its contents, and is still the wrong file.
+const svgPic = (bg, inner, vb) => '<svg viewBox="' + (vb || '0 0 16 12') + '" width="208" height="156" shape-rendering="crispEdges" style="background:' + bg + '">' + inner + '</svg>';
+const pr = (x, y, w, h, fill) => '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" fill="' + fill + '"/>';
+const FUN = {
+  'funnycatpic.png': svgPic('#ffe9b8',
+    '<path d="M3 2h2v2h6V2h2v3h1v5h-1v1H3v-1H2V5h1z" fill="#2b2540"/>' + pr(5, 6, 1, 2, '#fffdf7') + pr(10, 6, 1, 2, '#fffdf7') + pr(7, 8, 2, 1, '#e8546a')) + 'lol',
+  'letterfrommommy.txt': 'Sweetie,\nAre you eating enough? Your father says hi. The dog misses you.\nCall me.\nLove, Mommy',
+  'topsecret.jpeg': svgPic('#fffdf7',
+    pr(2, 2, 12, 1, '#2b2540') + pr(2, 4, 9, 1, '#2b2540') + pr(2, 6, 11, 1, '#2b2540') + pr(2, 8, 6, 1, '#2b2540') + pr(9, 7, 5, 3, '#e8546a')) + 'CLASSIFIED\n(it is the snack budget)',
+  'diary_DO_NOT_READ.txt': 'Dear diary,\nToday I pretended to type for six hours. Nobody noticed.\nI think I am getting promoted.',
+  'gary_karaoke.mp3': '♪ NOW PLAYING ♪\nGary - "My Heart Will Go On"\n(holiday party, 2:47 AM)',
+  'everyones_salaries.xls': 'Gary ........ $$$$$$$$\nDolores ..... $$$\nRaj ......... $$\nYou ......... $',
+  'resignation_draft.doc': 'Dear Gary,\nI quit.\n\n(unsent, 14th draft)',
+  'crush_poem.txt': 'Roses are red,\nthe printer is jammed,\nRaj from IT,\nplease notice me.',
+  'passwords.txt': 'password123\npassword1234\nhunter2\n(do not tell Raj)',
+  'vacation_pics.jpeg': svgPic('#bfe3ff',
+    pr(12, 1, 2, 2, '#f6c453') + pr(0, 6, 16, 3, '#6cb6f0') + pr(0, 9, 16, 3, '#ffe9b8') + pr(4, 4, 5, 1, '#e8546a') + pr(5, 3, 3, 1, '#e8546a') + pr(6, 5, 1, 5, '#2b2540')) + 'wish I was here',
+  'boss_secret_plans.ppt': 'SLIDE 1 of 1\n\nReplace everyone\nwith one (1) cat.',
+  'lottery_numbers.txt': '4  8  15  16  23  42\n\n(did not win)',
+};
+
 // Little pixel-art page icon for each file type, drawn on a 16x18 grid.
 function fileIcon(ext) {
+  if (ext === 'jpeg') ext = 'png';
   const [paper, c] = {
     xls: ['#e9f8ef', '#3fb27f'], doc: ['#eaf0ff', '#5b7fd6'], ppt: ['#fff1e3', '#f08a3c'],
     pdf: ['#ffecee', '#e8546a'], txt: ['#fffdf7', '#9a8f7c'], png: ['#fffdf7', '#6cb6f0'],
+    mp3: ['#f3ecff', '#8f6fe0'],
   }[ext];
   const r = (x, y, w, h, fill) => '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" fill="' + fill + '"/>';
   const art = {
@@ -579,8 +616,9 @@ function fileIcon(ext) {
     pdf: () => r(3, 7, 10, 4, c) + r(4, 8, 2, 2, '#fff') + r(7, 8, 2, 2, '#fff') + r(10, 8, 2, 2, '#fff') + r(3, 13, 10, 1, '#c4b9a3') + r(3, 15, 7, 1, '#c4b9a3'),
     txt: () => r(3, 7, 10, 1, c) + r(3, 9, 7, 1, c) + r(3, 11, 10, 1, c) + r(3, 13, 9, 1, c) + r(3, 15, 5, 1, c),
     png: () => r(3, 7, 10, 9, '#bfe3ff') + r(10, 8, 2, 2, '#f6c453') + r(6, 10, 2, 1, '#3fb27f') + r(5, 11, 4, 2, '#3fb27f') + r(9, 12, 3, 1, '#3fb27f') + r(3, 13, 10, 3, '#3fb27f'),
+    mp3: () => r(7, 7, 1, 7, c) + r(8, 7, 3, 2, c) + r(4, 12, 4, 3, c),
   }[ext]();
-  return '<svg viewBox="0 0 16 18" width="48" height="54" shape-rendering="crispEdges">' +
+  return '<svg viewBox="0 0 16 18" width="64" height="72" shape-rendering="crispEdges">' +
     '<path d="M1 0h10v1h1v1h1v1h1v1h1v14H1z" fill="#2b2540"/>' +
     '<path d="M2 1h8v4h4v12H2z" fill="' + paper + '"/>' +
     '<path d="M10 1h1v1h1v1h1v1h1v1h-4z" fill="' + c + '" opacity=".6"/>' +
@@ -600,17 +638,17 @@ function startFiles() {
   const otherExt = EXTS[(EXTS.indexOf(ext) + 1) % EXTS.length];
   const names = new Set([target,
     base + '_FINAL_v' + (v - 1) + ext, base + '_FINAL_v' + (v + 1) + ext,
-    base + '_FINAL_v' + v + '(1)' + ext, base + '_FINAL_v' + v + '_old' + ext,
-    base + '_final_v' + v + ext, base + '_FINAL_v' + v + otherExt,
-    base + '_FINAL' + ext, base + '_FINAL_FINAL_v' + v + ext, 'Copy_of_' + target]);
+    base + '_FINAL_v' + v + '_old' + ext, base + '_final_v' + v + ext, 'Copy_of_' + target,
+    ...Object.keys(FUN)]);
+  $('viewer').classList.add('hidden');
 
   const W = area.clientWidth, H = area.clientHeight;
-  const count = clamp(Math.round(W * H / 12000), 36, 110);
+  const count = clamp(Math.round(W * H / 26000), 24, 44);
   for (let guard = 0; names.size < count && guard < 5000; guard++) names.add(pick(BASES) + pick(SUFFIXES) + pick(EXTS));
 
   // Target goes to the bottom of the pile; everything else is shuffled on top of it.
   const rest = [...names].filter(n => n !== target).sort(() => Math.random() - 0.5);
-  const maxX = Math.max(0, W - 88), maxY = Math.max(0, H - 100);
+  const maxX = Math.max(0, W - 120), maxY = Math.max(0, H - 130);
   const tx = Math.random() * maxX, ty = Math.random() * maxY;
   [target, ...rest].forEach((name, i) => {
     const bury = i > 0 && i <= 4;   // a few files sit directly on the target
@@ -627,7 +665,7 @@ function startFiles() {
   });
 
   $('toast').innerHTML = '✉ NEW MAIL - Gary (Boss): "Open <b>' + esc(target) + '</b> for me. It is on your desktop."';
-  ft = { target, start: performance.now(), end: 0, wrong: 0, moves: 0, searched: false };
+  ft = { target, start: performance.now(), end: 0, wrong: 0, snoops: 0, moves: 0, searched: false };
   beep(880, 0.08); setTimeout(() => beep(1175, 0.12), 90);
 }
 
@@ -644,8 +682,8 @@ function wireFile(el, area) {
     const dx = e.clientX - sx, dy = e.clientY - sy;
     if (Math.abs(dx) + Math.abs(dy) > 4) moved = true;
     if (!moved) return;
-    el.style.left = clamp(ox + dx, 0, area.clientWidth - 88) + 'px';
-    el.style.top = clamp(oy + dy, 0, area.clientHeight - 60) + 'px';
+    el.style.left = clamp(ox + dx, 0, area.clientWidth - 120) + 'px';
+    el.style.top = clamp(oy + dy, 0, area.clientHeight - 80) + 'px';
   });
   const drop = () => { if (held && moved && ft) ft.moves++; held = false; };
   el.addEventListener('pointerup', drop);
@@ -657,15 +695,28 @@ function openFile(el) {
   if (!ft || ft.end || screen !== 'files') return;
   if (el.dataset.name === ft.target) {
     ft.end = performance.now();
+    $('viewer').classList.add('hidden');
     [523, 659, 784].forEach((hz, n) => setTimeout(() => beep(hz, 0.1), n * 90));
     setTimeout(() => buffer(startTriage), 400);
   } else {
     ft.wrong++;
-    beep(140, 0.15, 'sawtooth', 0.05);
     el.classList.add('wrong');
+    const fun = FUN[el.dataset.name];
+    if (fun) {
+      // Snooping: show the file. It still counts as a wrong file, and the clock keeps running.
+      ft.snoops++;
+      $('vTitle').textContent = el.dataset.name;
+      $('vBody').innerHTML = fun;
+      $('viewer').classList.remove('hidden');
+      beep(700, 0.05); setTimeout(() => beep(940, 0.07), 60);
+      return;
+    }
+    beep(140, 0.15, 'sawtooth', 0.05);
     el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake');
   }
 }
+
+$('vClose').addEventListener('click', () => $('viewer').classList.add('hidden'));
 
 $('search').addEventListener('input', () => {
   if (screen !== 'files' || !ft) return;
@@ -871,7 +922,8 @@ function showReceipt() {
   const tips2 = [];
   if (!ft.searched) tips2.push('Taskbar search not utilized. Retrieval took ' + t2secs.toFixed(1) + 's.');
   else if (tp2 > 8) tips2.push('Search located late. Inspect available tools first.');
-  if (ft.wrong) tips2.push('Incorrect documents opened: ' + ft.wrong + '. Verify full filename.');
+  if (ft.snoops) tips2.unshift('Personal files opened: ' + ft.snoops + '. Curiosity noted.');
+  if (ft.wrong - ft.snoops) tips2.push('Incorrect documents opened: ' + (ft.wrong - ft.snoops) + '. Verify full filename.');
   if (ft.moves > 5) tips2.push('Files manually relocated: ' + ft.moves + '. Not an approved method.');
   if (!tips2.length) tips2.push('Search utilized. Retrieval unremarkable.');
 
@@ -888,7 +940,8 @@ function showReceipt() {
     [tr.wrong * WRONG_FORWARD_COST, 'Read first.'],
     [tr.ai ? 0 : tp3, 'Ask for help.'],
     [ft.searched ? 0 : tp2, 'Use search.'],
-    [ft.wrong * WRONG_FILE_COST, 'Read filenames.'],
+    [(ft.wrong - ft.snoops) * WRONG_FILE_COST, 'Read filenames.'],
+    [ft.snoops * WRONG_FILE_COST, 'Stop snooping.'],
   ].sort((a, b) => b[0] - a[0]);
   const big = dire ? 'Unfixable.' : final >= 90 ? 'Change nothing.' : losses[0][1];
 
