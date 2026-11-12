@@ -227,6 +227,17 @@
   #cat { position: absolute; top: -29px; left: 0; animation: bob .4s steps(2) infinite; }
   @keyframes bob { 50% { transform: translateY(-4px); } }
 
+  /* ---------- success message ---------- */
+  #yay {
+    position: fixed; left: 50%; top: 42%; transform: translate(-50%, -50%); z-index: 300000;
+    padding: 20px 28px; text-align: center; white-space: nowrap;
+    background: var(--green); color: #fff; font-size: 14px;
+    border: 4px solid var(--ink); box-shadow: 8px 8px 0 #0006;
+    animation: yayPop .25s steps(3);
+  }
+  #yay small { display: block; margin-top: 10px; font-size: 8px; }
+  @keyframes yayPop { from { transform: translate(-50%, -50%) scale(.6); } to { transform: translate(-50%, -50%) scale(1); } }
+
   /* ---------- issue routing ---------- */
   .spark { flex: none; width: 26px; height: 26px; padding: 0; cursor: pointer; background: none; border: 0; }
   .spark svg { display: block; width: 22px; height: 22px; margin: 2px; fill: #b3a6f5; }
@@ -426,6 +437,8 @@
 
 </div>
 
+<div id="yay" class="hidden"></div>
+
 <div id="taskbar">
   <button class="btn start">▣ START</button>
   <span class="task" id="task">APTITUDE.EXE</span>
@@ -497,6 +510,15 @@ function buffer(next) {
     if (p % 20 === 0) beep(500 + p * 4, 0.03, 'square', 0.02);
     if (p >= 100) { clearInterval(iv); setTimeout(next, 300); }
   }, 100);
+}
+
+// Little success message after each task, then on to whatever comes next.
+const PRAISE = ['Nice work.', 'Well done.', 'Good job, you.', 'Gold star.', 'Look at you go.'];
+function celebrate(title, next) {
+  const el = $('yay');
+  el.innerHTML = '✔ ' + title + '<small>' + PRAISE[Math.floor(Math.random() * PRAISE.length)] + '</small>';
+  el.classList.remove('hidden');
+  setTimeout(() => { el.classList.add('hidden'); next(); }, 1300);
 }
 
 function begin() { buffer(startGame); }
@@ -583,7 +605,7 @@ function send() {
   g.end = performance.now();
   clearInterval(ticker);
   [523, 659, 784].forEach((f, n) => setTimeout(() => beep(f, 0.1), n * 90));
-  setTimeout(() => buffer(startFiles), 600);
+  celebrate('EMAIL SENT', () => buffer(startFiles));
 }
 
 /* ---------- task 2: file hunt ---------- */
@@ -717,7 +739,7 @@ function openFile(el) {
     ft.end = performance.now();
     $('viewer').classList.add('hidden');
     [523, 659, 784].forEach((hz, n) => setTimeout(() => beep(hz, 0.1), n * 90));
-    setTimeout(() => buffer(startTriage), 400);
+    celebrate('FILE FOUND', () => buffer(startTriage));
   } else {
     ft.wrong++;
     el.classList.add('wrong');
@@ -885,7 +907,7 @@ function forward(p, b) {
     document.querySelectorAll('.person').forEach(x => { x.disabled = true; });
     th.insertAdjacentHTML('beforeend', msgHTML(p[0], p[1], tr.c.fix, 'new ok'));
     [523, 659, 784].forEach((hz, n) => setTimeout(() => beep(hz, 0.1), n * 90));
-    setTimeout(showReceipt, 2000);
+    setTimeout(() => celebrate('ISSUE RESOLVED', showReceipt), 1500);
   } else {
     tr.wrong++;
     b.disabled = true;
