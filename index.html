@@ -492,7 +492,7 @@
 </div>
 
 <div id="feed" class="hidden">
-  <div class="ftitle"><span>▣ FEED</span><span>5 new</span></div>
+  <div class="ftitle"><span>▣ FEED</span><span>99+ new</span></div>
   <div id="feedScroll"></div>
 </div>
 
@@ -1083,22 +1083,37 @@ function drawTiles() {
 }
 
 function startMeet() {
-  mt = { start: performance.now(), end: 0, seen: new Set(), cam: true, camOff: false, iv: 0 };
+  mt = { start: performance.now(), end: 0, seen: new Set(), posts: 0, cam: true, camOff: false, iv: 0 };
   drawTiles();
   const fs = $('feedScroll');
-  fs.innerHTML = '<div class="fteaser"><span>5 NEW POSTS</span><span class="arrow">▼</span></div>' +
-    POSTS.map((p, i) => '<div class="post" data-i="' + i + '"><b>' + p[0] + '</b>' + p[1] + p[2] + '</div>').join('') +
-    '<div class="fend">You are all caught up.</div>';
+  fs.innerHTML = '<div class="fteaser"><span>NEW POSTS</span><span class="arrow">▼</span></div>';
   show('meet', 'Meeting (in progress)');
   fs.scrollTop = 0;
   if (feedWatcher) feedWatcher.disconnect();
   feedWatcher = new IntersectionObserver(entries => {
     entries.forEach(en => { if (en.isIntersecting && mt && !mt.end) mt.seen.add(en.target.dataset.i); });
   }, { root: fs, threshold: 0.4 });
-  fs.querySelectorAll('.post').forEach(el => feedWatcher.observe(el));
+  morePosts(); morePosts();
   tickMeet();
   mt.iv = setInterval(tickMeet, 250);
 }
+
+// The feed never ends: the same five pictures come round again, and every one looked at counts.
+function morePosts() {
+  const fs = $('feedScroll');
+  POSTS.forEach(p => {
+    const el = document.createElement('div');
+    el.className = 'post';
+    el.dataset.i = mt.posts++;
+    el.innerHTML = '<b>' + p[0] + '</b>' + p[1] + p[2];
+    fs.appendChild(el);
+    feedWatcher.observe(el);
+  });
+}
+$('feedScroll').addEventListener('scroll', () => {
+  const fs = $('feedScroll');
+  if (mt && !mt.end && fs.scrollTop + fs.clientHeight > fs.scrollHeight - 600) morePosts();
+});
 
 function tickMeet() {
   if (!mt || mt.end) return;
