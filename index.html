@@ -250,7 +250,9 @@
     background: var(--ink); border: 4px solid var(--ink); box-shadow: 6px 6px 0 #0006;
   }
   #feed .ftitle { display: flex; justify-content: space-between; padding: 6px 8px; color: var(--paper); font-size: 8px; }
-  #feedScroll { height: 250px; overflow-y: auto; background: var(--paper); overscroll-behavior: contain; }
+  .post.dark { background: #1c182b; color: var(--paper); }
+  .post.dark b { color: #b3a6f5; }
+  #feedScroll { height: 250px; overflow-x: hidden; overflow-y: auto; background: var(--paper); overscroll-behavior: contain; }
   .fteaser {
     height: 236px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
     text-align: center; font-size: 10px; line-height: 1.8; color: var(--title);
@@ -478,7 +480,7 @@
     <div id="tiles"></div>
     <div id="caption"></div>
     <div class="hud">
-      <span class="hint" id="meetClock">00:00 / 01:00</span>
+      <span class="hint" id="meetClock">00:00 / 00:30</span>
       <button class="btn" id="camBtn" type="button">CAMERA: ON</button>
     </div>
   </section>
@@ -520,7 +522,7 @@ const DRAFT_PASTE_BONUS = 5;
 
 const $ = id => document.getElementById(id);
 const screens = ['intro', 'loading', 'mail', 'files', 'triage', 'meet', 'result'];
-const MEETING_SECONDS = 60;
+const MEETING_SECONDS = 30;
 const CAMERA_OFF_BONUS = 10;
 let mt = null;         // meeting task state
 const SECONDS_PER_POINT_TRIAGE = 4;
@@ -1083,7 +1085,7 @@ function drawTiles() {
 }
 
 function startMeet() {
-  mt = { start: performance.now(), end: 0, seen: new Set(), posts: 0, cam: true, camOff: false, iv: 0 };
+  mt = { start: performance.now(), end: 0, seen: new Set(), posts: 0, batch: 0, cam: true, camOff: false, iv: 0 };
   drawTiles();
   const fs = $('feedScroll');
   fs.innerHTML = '<div class="fteaser"><span>NEW POSTS</span><span class="arrow">▼</span></div>';
@@ -1099,13 +1101,41 @@ function startMeet() {
 }
 
 // The feed never ends: the same five pictures come round again, and every one looked at counts.
+const CAT = '<path d="M3 2h2v2h6V2h2v3h1v5h-1v1H3v-1H2V5h1z" fill="#2b2540"/>';
+const FEED_TIERS = [
+  POSTS,
+  // second lap: same pictures, captions slightly off
+  [['@catfacts', POSTS[0][1], 'he is still sitting'],
+   ['@brenda_travels', POSTS[1][1], 'day 40. I am not coming back'],
+   ['@desk_lunch', POSTS[2][1], 'this is my ninth one today'],
+   ['@sunsets_daily', POSTS[3][1], 'it did not go down tonight'],
+   ['@gary_official', POSTS[4][1], 'nobody came']],
+  // third lap: the pictures change
+  [['@catfacts', svgPic('#ffe9b8', CAT + pr(5, 6, 1, 2, '#fffdf7') + pr(10, 6, 1, 2, '#fffdf7') + pr(7, 5, 2, 2, '#e8546a') + pr(7, 8, 2, 1, '#e8546a')), 'he knows'],
+   ['@brenda_travels', svgPic('#bfe3ff', pr(12, 1, 2, 2, '#f6c453') + pr(0, 3, 16, 7, '#6cb6f0') + pr(0, 10, 16, 2, '#ffe9b8') + pr(4, 4, 5, 1, '#e8546a') + pr(5, 3, 3, 1, '#e8546a')), 'the sea is closer now'],
+   ['@desk_lunch', svgPic('#d9f5e5', pr(5, 0, 6, 1, '#f08a3c') + pr(4, 1, 8, 1, '#f08a3c') + [2, 3, 4, 5, 6, 7, 8, 9].map((y, k) => pr(3 + k % 2, y, 10 - 2 * (k % 2), 1, ['#8a4b2a', '#f6c453', '#3fb27f'][k % 3])).join('') + pr(4, 10, 8, 2, '#f08a3c')), 'it keeps growing'],
+   ['@sunsets_daily', svgPic('#ffb38a', pr(2, 3, 4, 4, '#f6c453') + pr(10, 3, 4, 4, '#f6c453') + pr(0, 8, 16, 4, '#5a4fcf')), 'there are two now'],
+   ['@gary_official', svgPic('#ffd9e0', [3, 5, 7, 9, 11].map(x => pr(x, 3, 1, 3, '#5a4fcf') + pr(x, 2, 1, 1, '#f6c453')).join('') + pr(2, 6, 12, 4, '#fffdf7') + pr(2, 6, 12, 1, '#e8546a') + pr(1, 10, 14, 1, '#2b2540')), 'how old am I']],
+  // fourth lap onward: it is about you now
+  [['@c_a_t', svgPic('#2b2540', CAT.replace('#2b2540', '#e8546a') + [[4, 5], [6, 6], [8, 5], [10, 6], [5, 8], [9, 8]].map(e => pr(e[0], e[1], 1, 1, '#fffdf7')).join('')), 'look behind your monitor'],
+   ['@you', svgPic('#1c182b', pr(5, 2, 6, 7, '#f6d3b3') + pr(5, 1, 6, 2, '#8a4b2a') + pr(6, 5, 1, 1, '#2b2540') + pr(9, 5, 1, 1, '#2b2540') + pr(7, 7, 2, 1, '#c9432f') + pr(3, 9, 10, 3, '#5a4fcf')), 'this is you, right now'],
+   ['@the_meeting', svgPic('#3a3355', pr(1, 1, 6, 4, '#1c182b') + pr(9, 1, 6, 4, '#1c182b') + pr(1, 7, 6, 4, '#1c182b') + pr(9, 7, 6, 4, '#3fb27f')), 'the meeting is still happening'],
+   ['@feed', svgPic('#2b2540', pr(7, 1, 2, 6, '#fffdf7') + pr(5, 6, 6, 1, '#fffdf7') + pr(6, 7, 4, 1, '#fffdf7') + pr(7, 8, 2, 1, '#fffdf7')), 'there is no bottom'],
+   ['@gary_official', svgPic('#e8546a', pr(2, 3, 5, 5, '#fffdf7') + pr(9, 3, 5, 5, '#fffdf7') + pr(4, 5, 2, 2, '#2b2540') + pr(11, 5, 2, 2, '#2b2540')), 'eyes up here']],
+];
+
+// The feed never ends. Each lap of five posts is stranger than the last, and every post looked at counts.
 function morePosts() {
   const fs = $('feedScroll');
-  POSTS.forEach(p => {
+  const d = mt.batch++;
+  FEED_TIERS[Math.min(FEED_TIERS.length - 1, d)].forEach((p, i) => {
     const el = document.createElement('div');
-    el.className = 'post';
+    el.className = 'post' + (d >= 3 ? ' dark' : '');
     el.dataset.i = mt.posts++;
-    el.innerHTML = '<b>' + p[0] + '</b>' + p[1] + p[2];
+    // from the third lap the pictures tilt and shift colour, more with every lap
+    const fx = d < 2 ? '' : ' style="filter:hue-rotate(' + (d - 1) * 47 + 'deg)' + (d >= 4 && i % 2 ? ' invert(1)' : '') +
+      ';transform:rotate(' + (i % 2 ? 1 : -1) * Math.min(9, (d - 1) * 2) + 'deg)' + (d >= 5 ? ' scaleX(-1)' : '') + '"';
+    el.innerHTML = '<b>' + p[0] + '</b><div' + fx + '>' + p[1] + '</div>' + p[2];
     fs.appendChild(el);
     feedWatcher.observe(el);
   });
@@ -1119,8 +1149,8 @@ function tickMeet() {
   if (!mt || mt.end) return;
   const t = (performance.now() - mt.start) / 1000;
   const shown = Math.min(MEETING_SECONDS, Math.floor(t));
-  $('meetClock').textContent = '00:' + String(shown).padStart(2, '0') + ' / 01:00';
-  $('caption').textContent = DRONE[Math.min(DRONE.length - 1, Math.floor(t / 4))];
+  $('meetClock').textContent = '00:' + String(shown).padStart(2, '0') + ' / 00:30';
+  $('caption').textContent = DRONE[Math.min(DRONE.length - 1, Math.floor(t / 2))];
   if (t >= MEETING_SECONDS) {
     mt.end = performance.now();
     clearInterval(mt.iv);
