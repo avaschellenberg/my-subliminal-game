@@ -240,6 +240,9 @@
   }
   .tile svg { width: 72px; height: 72px; display: block; }
   .tile.speaking { border-color: var(--green); }
+  .tile.warn { border-color: #f6c453; }
+  .tile.watching { border-color: var(--red); background: #6a2f45; }
+  #feed.caught { border-color: var(--red); background: var(--red); }
   .tile.off { background: #1c182b; border-color: #1c182b; color: #8d86a8; }
   #caption {
     min-height: 50px; padding: 12px 14px; background: var(--paper); border-top: 4px solid var(--ink);
@@ -970,7 +973,7 @@ const NOPES = ['Not my department. Sending this back.', 'I do not have access to
   'Wrong team, sorry!', 'Why am I on this thread?'];
 
 // Tiny pixel portrait, stable per name.
-function face(name) {
+function face(name, staring) {
   let h = 0;
   for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   const bg = ['#bfe3ff', '#ffd9e0', '#d9f5e5', '#ffe9b8', '#e2dcff'][h % 5];
@@ -978,9 +981,13 @@ function face(name) {
   const skin = ['#f6d3b3', '#d9a273', '#a86f4a', '#fbe3cf'][(h >> 6) % 4];
   const shirt = ['#5a4fcf', '#3fb27f', '#e8546a', '#f08a3c'][(h >> 9) % 4];
   const r = (x, y, w, hh, fill) => '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + hh + '" fill="' + fill + '"/>';
-  return '<svg viewBox="0 0 8 8" width="28" height="28" shape-rendering="crispEdges">' +
-    r(0, 0, 8, 8, bg) + r(1, 2, 6, 5, skin) + r(1, 1, 6, 2, hair) + r(0, 7, 8, 1, shirt) +
-    r(2, 4, 1, 1, '#2b2540') + r(5, 4, 1, 1, '#2b2540') + r(3, 6, 2, 1, '#c9432f') + '</svg>';
+  // drawn on a 16x16 grid so the staring version has room for very large eyes
+  return '<svg viewBox="0 0 16 16" width="28" height="28" shape-rendering="crispEdges">' +
+    r(0, 0, 16, 16, bg) + r(2, 4, 12, 10, skin) + r(2, 2, 12, 4, hair) + r(0, 14, 16, 2, shirt) +
+    (staring
+      ? r(3, 6, 4, 5, '#fff') + r(9, 6, 4, 5, '#fff') + r(4, 8, 2, 2, '#2b2540') + r(10, 8, 2, 2, '#2b2540') + r(7, 12, 2, 1, '#c9432f')
+      : r(4, 8, 2, 2, '#2b2540') + r(10, 8, 2, 2, '#2b2540') + r(6, 12, 4, 2, '#c9432f')) +
+    '</svg>';
 }
 
 const msgHTML = (name, team, text, cls) =>
@@ -1050,7 +1057,8 @@ $('aiBtn').addEventListener('click', () => {
 });
 
 /* ---------- task 4: the meeting ---------- */
-// Sit through it. The feed in the corner has five pictures; each one looked at is a distraction.
+// Sit through it. Scrolling the feed is only safe while the boss is not staring at you:
+// every post that scrolls into view while he is watching (and your camera is on) is one he notices.
 const POSTS = [
   ['@catfacts', svgPic('#ffe9b8', '<path d="M3 2h2v2h6V2h2v3h1v5h-1v1H3v-1H2V5h1z" fill="#2b2540"/>' + pr(5, 6, 1, 2, '#fffdf7') + pr(10, 6, 1, 2, '#fffdf7') + pr(7, 8, 2, 1, '#e8546a')), 'he sits'],
   ['@brenda_travels', svgPic('#bfe3ff', pr(12, 1, 2, 2, '#f6c453') + pr(0, 6, 16, 3, '#6cb6f0') + pr(0, 9, 16, 3, '#ffe9b8') + pr(4, 4, 5, 1, '#e8546a') + pr(5, 3, 3, 1, '#e8546a') + pr(6, 5, 1, 5, '#2b2540')), 'out of office :)'],
@@ -1078,14 +1086,16 @@ const DRONE = [
 let feedWatcher = null;
 
 function drawTiles() {
-  const tile = (name, cls) => '<div class="tile ' + cls + '">' + face(name) + '<span>' + name + '</span></div>';
-  $('tiles').innerHTML = tile('Gary Boss', 'speaking') + tile('Dolores Finch', '') + tile('Raj Patel', '') +
-    (mt.cam ? tile('You', '') : '<div class="tile off"><span>CAMERA OFF</span><span>You</span></div>');
+  const tile = (name, cls, label, staring) => '<div class="tile ' + cls + '">' + face(name, staring) + '<span>' + label + '</span></div>';
+  const gary = mt.look === 'watch' ? tile('Gary Boss', 'watching', 'GARY IS WATCHING', true)
+    : tile('Gary Boss', mt.look === 'warn' ? 'warn' : 'speaking', 'Gary Boss', false);
+  $('tiles').innerHTML = gary + tile('Dolores Finch', '', 'Dolores Finch') + tile('Raj Patel', '', 'Raj Patel') +
+    (mt.cam ? tile('You', '', 'You') : '<div class="tile off"><span>CAMERA OFF</span><span>You</span></div>');
   $('camBtn').textContent = 'CAMERA: ' + (mt.cam ? 'ON' : 'OFF');
 }
 
 function startMeet() {
-  mt = { start: performance.now(), end: 0, seen: new Set(), posts: 0, batch: 0, cam: true, camOff: false, iv: 0 };
+  mt = { start: performance.now(), end: 0, seen: new Set(), caught: new Set(), look: 'away', nextAt: performance.now() + 3000, posts: 0, batch: 0, cam: true, camOff: false, iv: 0 };
   drawTiles();
   const fs = $('feedScroll');
   fs.innerHTML = '<div class="fteaser"><span>NEW POSTS</span><span class="arrow">▼</span></div>';
@@ -1093,11 +1103,22 @@ function startMeet() {
   fs.scrollTop = 0;
   if (feedWatcher) feedWatcher.disconnect();
   feedWatcher = new IntersectionObserver(entries => {
-    entries.forEach(en => { if (en.isIntersecting && mt && !mt.end) mt.seen.add(en.target.dataset.i); });
+    entries.forEach(en => {
+      if (!en.isIntersecting || !mt || mt.end) return;
+      mt.seen.add(en.target.dataset.i);
+      // He only notices if he is staring right now and can actually see you.
+      if (mt.look === 'watch' && mt.cam && !mt.caught.has(en.target.dataset.i)) {
+        mt.caught.add(en.target.dataset.i);
+        beep(140, 0.15, 'sawtooth', 0.05);
+        const feed = $('feed');
+        feed.classList.add('caught');
+        setTimeout(() => feed.classList.remove('caught'), 250);
+      }
+    });
   }, { root: fs, threshold: 0.4 });
   morePosts(); morePosts();
   tickMeet();
-  mt.iv = setInterval(tickMeet, 250);
+  mt.iv = setInterval(tickMeet, 100);
 }
 
 // The feed never ends: the same five pictures come round again, and every one looked at counts.
@@ -1146,10 +1167,18 @@ $('feedScroll').addEventListener('scroll', () => {
 
 function tickMeet() {
   if (!mt || mt.end) return;
-  const t = (performance.now() - mt.start) / 1000;
+  const now = performance.now();
+  const t = (now - mt.start) / 1000;
+  // Gary's attention: looks away for a while, a short warning, then stares with big eyes.
+  if (now >= mt.nextAt) {
+    if (mt.look === 'away') { mt.look = 'warn'; mt.nextAt = now + 600; }
+    else if (mt.look === 'warn') { mt.look = 'watch'; mt.nextAt = now + 1500 + Math.random() * 1200; beep(196, 0.12, 'square', 0.03); }
+    else { mt.look = 'away'; mt.nextAt = now + 2500 + Math.random() * 2500; }
+    drawTiles();
+  }
   const shown = Math.min(MEETING_SECONDS, Math.floor(t));
   $('meetClock').textContent = '00:' + String(shown).padStart(2, '0') + ' / 00:30';
-  $('caption').textContent = DRONE[Math.min(DRONE.length - 1, Math.floor(t / 2))];
+  $('caption').textContent = mt.look === 'watch' ? 'Gary: ...are we ALL paying attention?' : DRONE[Math.min(DRONE.length - 1, Math.floor(t / 2))];
   if (t >= MEETING_SECONDS) {
     mt.end = performance.now();
     clearInterval(mt.iv);
@@ -1191,7 +1220,7 @@ function showReceipt() {
   const tp3 = Math.floor(t3secs / SECONDS_PER_POINT_TRIAGE);
   const s3 = Math.max(0, 100 - tr.wrong * WRONG_FORWARD_COST - tp3);
   const seen = mt.seen.size;
-  const scrolls = Math.floor(seen / 2);   // one distraction for every two posts looked at
+  const scrolls = mt.caught.size;   // posts the boss saw you scroll to
   const s4 = Math.max(0, 100 - scrolls * WRONG_FILE_COST) + (mt.camOff ? CAMERA_OFF_BONUS : 0);
   const distract = ft.wrong - ft.illit;
   const final = Math.min(100, Math.round((s1 + s2 + s3 + s4) / 4));
@@ -1239,7 +1268,8 @@ function showReceipt() {
   if (!tips3.length) tips3.push('Issue routed correctly without assistance.');
 
   const tips4 = [];
-  if (seen) tips4.push('Feed posts viewed during meeting: ' + seen + '. Distraction noted.');
+  if (scrolls) tips4.push('Posts noticed by supervisor: ' + scrolls + '. Scroll only when unobserved.');
+  else if (seen) tips4.push('Feed viewed undetected. Discretion noted.');
   if (mt.camOff) tips4.push('Camera disabled. Resourceful.');
   if (!tips4.length) tips4.push('Meeting endured without incident.');
 
@@ -1252,7 +1282,7 @@ function showReceipt() {
     [ft.searched ? 0 : tp2, 'Use search.'],
     [distract * WRONG_FILE_COST, 'Stop snooping.'],
     [ft.illit * WRONG_FILE_COST, 'Learn to read.'],
-    [scrolls * WRONG_FILE_COST, 'Stop scrolling.'],
+    [scrolls * WRONG_FILE_COST, "Don't get caught."],
   ].sort((a, b) => b[0] - a[0]);
   const big = dire ? 'Unfixable.' : final >= 90 ? 'Change nothing.' : losses[0][1];
 
@@ -1288,7 +1318,7 @@ function showReceipt() {
     '<hr>' +
     '<div>TASK 4: MEETING</div>' +
     li('POSTS VIEWED', seen) +
-    li('DISTRACTION x' + scrolls, '-' + scrolls * WRONG_FILE_COST, scrolls > 0) +
+    li('NOTICED BY BOSS x' + scrolls, '-' + scrolls * WRONG_FILE_COST, scrolls > 0) +
     (mt.camOff ? li('CAMERA OFF BONUS', '+' + CAMERA_OFF_BONUS) : '') +
     li('SUBTOTAL', s4 + '/100') +
     '<hr>' +
