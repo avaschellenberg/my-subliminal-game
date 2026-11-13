@@ -235,9 +235,7 @@
   /* ---------- meeting ---------- */
   #meet { margin-right: 250px; }   /* leave the corner free for the boss and the feed */
   @media (max-width: 900px) { #meet { margin-right: 0; } }
-  #bossCam { border-bottom: 4px solid var(--ink); }
-  #bossCam .tile { height: 118px; }
-  #tiles { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; padding: 12px; background: var(--ink); }
+  #tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px; background: var(--ink); }
   .tile {
     height: 128px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
     background: #3a3355; color: var(--paper); font-size: 8px; border: 4px solid #3a3355;
@@ -509,7 +507,6 @@
 </div>
 
 <div id="feed" class="hidden">
-  <div id="bossCam"></div>
   <div class="ftitle"><span>▣ FEED</span><span>99+ new</span></div>
   <div id="feedScroll"></div>
 </div>
@@ -1162,9 +1159,9 @@ function drawTiles() {
   const tile = (name, cls, label, staring) => '<div class="tile ' + cls + '">' + face(name, staring) + '<span>' + label + '</span></div>';
   const boss = mt.look === 'watch' ? tile('Boss', 'watching', 'BOSS IS WATCHING', true)
     : tile('Boss', mt.look === 'warn' ? 'warn' : 'speaking', 'Boss', false);
-  $('bossCam').innerHTML = boss;
+  // Boss gets the bottom-right tile, the one closest to the feed.
   $('tiles').innerHTML = tile('Dolores Finch', '', 'Dolores Finch') + tile('Raj Patel', '', 'Raj Patel') +
-    (mt.cam ? tile('You', '', 'You') : '<div class="tile off"><span>CAMERA ISSUES</span><span>You</span></div>');
+    (mt.cam ? tile('You', '', 'You') : '<div class="tile off"><span>CAMERA ISSUES</span><span>You</span></div>') + boss;
   $('camBtn').textContent = 'CAMERA: ' + (mt.cam ? 'ON' : 'OFF');
 }
 
