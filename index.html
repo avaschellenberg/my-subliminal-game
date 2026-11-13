@@ -710,6 +710,14 @@ document.addEventListener('paste', e => {
   }, 14);
 });
 
+function send() {
+  if (!g || g.idx < g.text.length || g.end) return;
+  g.end = performance.now();
+  clearInterval(ticker);
+  [523, 659, 784].forEach((f, n) => setTimeout(() => beep(f, 0.1), n * 90));
+  celebrate('EMAIL SENT', () => buffer(startFiles));
+}
+
 /* ---------- task 2: file hunt ---------- */
 const BASES = ['Q3_Budget', 'Synergy_Deck', 'Invoice_0042', 'Meeting_Notes', 'Fridge_Policy', 'Performance_Review',
   'Org_Chart', 'Expense_Report', 'Roadmap', 'Headcount', 'Untitled', 'New_Folder', 'scan0001', 'Copy_of_Copy',
