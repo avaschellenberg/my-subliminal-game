@@ -119,6 +119,18 @@
   .body { padding: 18px; }
   .hidden { display: none !important; }
 
+  /* ---------- welcome ---------- */
+  #welcome { max-width: 900px; }
+  #welcome .titlebar { font-size: 12px; padding: 12px 14px; }
+  #welcome .body { padding: 56px 44px 44px; font-size: 16px; line-height: 2; }
+  #welcome .body p { margin: 0 0 28px; }
+  #welcome h1 { font-size: 30px; line-height: 1.5; margin: 0 0 36px; color: var(--title); }
+  #welcome b { font-weight: normal; text-shadow: 2px 0 0 currentColor; letter-spacing: 2px; }
+  #welcome .luck { font-size: 24px; margin: 36px 0 0; }
+  #welcome .luck i { font-style: normal; }
+  #welcome .btn { font-size: 16px; padding: 18px 22px; }
+  #welcome .row { margin-top: 44px; justify-content: flex-end; }
+
   /* ---------- intro ---------- */
   #intro { max-width: 900px; }
   #intro .titlebar { font-size: 12px; padding: 12px 14px; }
@@ -364,6 +376,10 @@
   .file.wrong .n { background: var(--red); color: #fff; }
 
   @media (max-width: 640px) {
+    #welcome .body { padding: 28px 18px; font-size: 11px; }
+    #welcome h1 { font-size: 16px; }
+    #welcome .luck { font-size: 14px; }
+    #welcome .btn { font-size: 11px; padding: 12px; }
     #intro .body { padding: 28px 18px; font-size: 11px; }
     #intro h1 { font-size: 16px; }
     #intro .btn { font-size: 11px; padding: 12px; }
@@ -384,8 +400,22 @@
 
 <div id="desktop">
 
+  <!-- WELCOME -->
+  <section class="window" id="welcome">
+    <div class="titlebar"><span>WELCOME.EXE</span><span class="dots"><i></i><i></i><i></i></span></div>
+    <div class="body">
+      <h1>Greetings, Player</h1>
+      <p>You have been selected for our <b>Desk Job Aptitude Test</b>.</p>
+      <p>You will be evaluated in your efficiency, focus, and creativity.</p>
+      <p class="luck"><i style="color:#e8546a">G</i><i style="color:#f2a03d">o</i><i style="color:#e3c21f">o</i><i style="color:#3fb27f">d</i>&nbsp;<i style="color:#5a4fcf">L</i><i style="color:#b05ad6">u</i><i style="color:#e86aa8">c</i><i style="color:#e8546a">k</i><i style="color:#f2a03d">.</i></p>
+      <div class="row">
+        <button class="btn primary" id="welcomeNext">CONTINUE [ENTER]</button>
+      </div>
+    </div>
+  </section>
+
   <!-- INTRO -->
-  <section class="window" id="intro">
+  <section class="window hidden" id="intro">
     <div class="titlebar"><span>APTITUDE.EXE</span><span class="dots"><i></i><i></i><i></i></span></div>
     <div class="body">
       <h1>DESK JOB APTITUDE TEST</h1>
@@ -524,7 +554,7 @@ const AI_WRITE_BONUS = 10;
 const DRAFT_PASTE_BONUS = 5;
 
 const $ = id => document.getElementById(id);
-const screens = ['intro', 'loading', 'mail', 'files', 'triage', 'meet', 'result'];
+const screens = ['welcome', 'intro', 'loading', 'mail', 'files', 'triage', 'meet', 'result'];
 const MEETING_SECONDS = 30;
 const CAMERA_OFF_BONUS = 10;
 let mt = null;         // meeting task state
@@ -536,7 +566,7 @@ const WRONG_FILE_COST = 5;
 const PASTE_BONUS = 10;
 let ft = null;         // file task state
 let zTop = 1000;
-let screen = 'intro';
+let screen = 'welcome';
 let lastEmail = -1;
 let g = null;          // current game state
 let ticker = null;
@@ -591,6 +621,7 @@ function celebrate(title, next) {
   setTimeout(() => { el.classList.add('hidden'); next(); }, 1300);
 }
 
+function leaveWelcome() { beep(660, 0.08); show('intro', $('task').textContent); }
 function begin() { buffer(startGame); }
 
 function startGame() {
@@ -1355,6 +1386,10 @@ function showReceipt() {
 /* ---------- input ---------- */
 document.addEventListener('keydown', e => {
   if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (screen === 'welcome') {
+    if (e.key === 'Enter' && !e.repeat) { e.preventDefault(); leaveWelcome(); }
+    return;
+  }
   if (screen === 'intro' || screen === 'result') {
     if (e.key === 'Enter' && !e.repeat && !printing) { e.preventDefault(); begin(); }
     return;
@@ -1374,6 +1409,7 @@ document.addEventListener('keydown', e => {
   }
 });
 $('begin').addEventListener('click', begin);
+$('welcomeNext').addEventListener('click', leaveWelcome);
 $('retry').addEventListener('click', begin);
 $('send').addEventListener('click', send);
 document.querySelectorAll('.btn').forEach(b => b.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') e.preventDefault(); }));
