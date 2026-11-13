@@ -121,8 +121,6 @@
 
   /* ---------- welcome ---------- */
   #welcome { max-width: 900px; position: relative; z-index: 100; }
-  #backdrop { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
-  #backdrop .file { cursor: default; }
   #welcome .titlebar { font-size: 12px; padding: 12px 14px; }
   #welcome .body { padding: 56px 44px 44px; font-size: 16px; line-height: 2; text-align: center; }
   #welcome .body p { margin: 0 0 28px; }
@@ -372,7 +370,7 @@
 </head>
 <body>
 
-<div id="icons" class="hidden">
+<div id="icons">
   <div class="icon"><div class="glyph folder">▤</div>My Stuff</div>
   <div class="icon"><div class="glyph mail">✉</div>Pmail</div>
   <div class="icon"><div class="glyph">?</div>Aptitude .exe</div>
@@ -380,7 +378,6 @@
 </div>
 
 <div id="desktop">
-  <div id="backdrop"></div>
 
   <!-- WELCOME -->
   <section class="window" id="welcome">
@@ -545,8 +542,7 @@ function show(name, taskLabel) {
   screen = name;
   screens.forEach(s => $(s).classList.toggle('hidden', s !== name));
   $('task').textContent = taskLabel;
-  $('icons').classList.toggle('hidden', name === 'files' || name === 'welcome');
-  $('backdrop').classList.toggle('hidden', name !== 'welcome');
+  $('icons').classList.toggle('hidden', name === 'files');
   $('feed').classList.toggle('hidden', name !== 'meet');
   $('desktop').scrollTop = 0;
 }
@@ -809,25 +805,6 @@ function startFiles() {
   $('toast').innerHTML = '✉ NEW MAIL - Gary (Boss): "Open <b>' + esc(target) + '</b> for me. It is on your desktop."';
   ft = { target, base, start: performance.now(), end: 0, wrong: 0, snoops: 0, illit: 0, moves: 0, searched: false, pasted: false };
   beep(880, 0.08); setTimeout(() => beep(1175, 0.12), 90);
-}
-
-// The welcome screen sits on the same cluttered desktop as the file hunt (look, don't touch).
-function drawBackdrop() {
-  const area = $('backdrop');
-  area.innerHTML = '';
-  const W = area.clientWidth, H = area.clientHeight;
-  const names = new Set(Object.keys(FUN));
-  const count = clamp(Math.round(W * H / 26000), 24, 44);
-  for (let guard = 0; names.size < count && guard < 5000; guard++) names.add(pick(BASES) + pick(SUFFIXES) + pick(EXTS));
-  const maxX = Math.max(0, W - 120), maxY = Math.max(0, H - 130);
-  [...names].sort(() => Math.random() - 0.5).forEach((name, i) => {
-    const e = name.slice(name.lastIndexOf('.') + 1);
-    const el = document.createElement('div');
-    el.className = 'file ' + e;
-    el.style.left = Math.random() * maxX + 'px'; el.style.top = Math.random() * maxY + 'px'; el.style.zIndex = i + 1;
-    el.innerHTML = fileIcon(e) + '<span class="n">' + esc(name) + '</span>';
-    area.appendChild(el);
-  });
 }
 
 function wireFile(el, area) {
@@ -1388,7 +1365,6 @@ document.addEventListener('keydown', e => {
   }
 });
 $('welcomeNext').addEventListener('click', begin);
-drawBackdrop();
 $('retry').addEventListener('click', begin);
 $('send').addEventListener('click', send);
 document.querySelectorAll('.btn').forEach(b => b.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') e.preventDefault(); }));
