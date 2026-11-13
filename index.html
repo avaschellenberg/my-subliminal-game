@@ -233,7 +233,11 @@
   @keyframes bob { 50% { transform: translateY(-4px); } }
 
   /* ---------- meeting ---------- */
-  #tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px; background: var(--ink); }
+  #meet { margin-right: 250px; }   /* leave the corner free for the boss and the feed */
+  @media (max-width: 900px) { #meet { margin-right: 0; } }
+  #bossCam { border-bottom: 4px solid var(--ink); }
+  #bossCam .tile { height: 118px; }
+  #tiles { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; padding: 12px; background: var(--ink); }
   .tile {
     height: 128px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
     background: #3a3355; color: var(--paper); font-size: 8px; border: 4px solid #3a3355;
@@ -505,6 +509,7 @@
 </div>
 
 <div id="feed" class="hidden">
+  <div id="bossCam"></div>
   <div class="ftitle"><span>▣ FEED</span><span>99+ new</span></div>
   <div id="feedScroll"></div>
 </div>
@@ -524,8 +529,8 @@ const EMAILS = [
     body: "Dear Team,\nI sincerely apologize for replying all to the entire company this morning. It was not my intention to share my lunch order with four hundred people, and I regret any confusion about the extra pickles.\nGoing forward, I will check the recipient line twice before sending anything. Thank you for your patience and for the many replies asking me to stop.\nRegretfully,\nA Humbled Employee" },
   { to: 'brenda@bigcorp.biz', subject: 'My Sincere Apologies',
     body: "Hi Brenda,\nI am so sorry for missing the budget meeting on Monday. I had the wrong room, the wrong floor, and the wrong day. I take full responsibility for the empty chair.\nI have read the notes and will send my numbers by end of day. To avoid a repeat, I have set three reminders and written the room on my hand.\nApologetically,\nYour Colleague" },
-  { to: 'gary.boss@bigcorp.biz', subject: 'Apology (Formal)',
-    body: "Dear Gary,\nPlease accept my apology for the delay on the quarterly report. I underestimated the work and should have flagged it sooner instead of going quiet.\nYou will have the full report by Friday at noon. In the future I will raise problems early, even small ones, so nothing lands on your desk as a surprise.\nWith regret,\nYour Favorite Hire" },
+  { to: 'boss@bigcorp.biz', subject: 'Apology (Formal)',
+    body: "Dear Boss,\nPlease accept my apology for the delay on the quarterly report. I underestimated the work and should have flagged it sooner instead of going quiet.\nYou will have the full report by Friday at noon. In the future I will raise problems early, even small ones, so nothing lands on your desk as a surprise.\nWith regret,\nYour Favorite Hire" },
 ];
 const SECONDS_PER_POINT = 5;
 const AI_WRITE_BONUS = 10;
@@ -781,9 +786,9 @@ const FUN = {
   'topsecret.jpeg': svgPic('#fffdf7',
     pr(2, 2, 12, 1, '#2b2540') + pr(2, 4, 9, 1, '#2b2540') + pr(2, 6, 11, 1, '#2b2540') + pr(2, 8, 6, 1, '#2b2540') + pr(9, 7, 5, 3, '#e8546a')) + 'CLASSIFIED\n(it is the snack budget)',
   'diary_DO_NOT_READ.txt': 'Dear diary,\nToday I pretended to type for six hours. Nobody noticed.\nI think I am getting promoted.',
-  'gary_karaoke.mp3': '♪ NOW PLAYING ♪\nGary - "My Heart Will Go On"\n(holiday party, 2:47 AM)',
-  'everyones_salaries.xls': 'Gary ........ $$$$$$$$\nDolores ..... $$$\nRaj ......... $$\nYou ......... $',
-  'resignation_draft.doc': 'Dear Gary,\nI quit.\n\n(unsent, 14th draft)',
+  'boss_karaoke.mp3': '♪ NOW PLAYING ♪\nBoss - "My Heart Will Go On"\n(holiday party, 2:47 AM)',
+  'everyones_salaries.xls': 'Boss ........ $$$$$$$$\nDolores ..... $$$\nRaj ......... $$\nYou ......... $',
+  'resignation_draft.doc': 'Dear Boss,\nI quit.\n\n(unsent, 14th draft)',
   'crush_poem.txt': 'Roses are red,\nthe printer is jammed,\nRaj from IT,\nplease notice me.',
   'passwords.txt': 'password123\npassword1234\nhunter2\n(do not tell Raj)',
   'vacation_pics.jpeg': svgPic('#bfe3ff',
@@ -856,7 +861,7 @@ function startFiles() {
     area.appendChild(el);
   });
 
-  $('toast').innerHTML = '✉ NEW MAIL - Gary (Boss): "Open <b>' + esc(target) + '</b> for me. It is on your desktop."';
+  $('toast').innerHTML = '✉ NEW MAIL - Boss: "Open <b>' + esc(target) + '</b> for me. It is on your desktop."';
   ft = { target, base, start: performance.now(), end: 0, wrong: 0, snoops: 0, illit: 0, moves: 0, searched: false, pasted: false };
   beep(880, 0.08); setTimeout(() => beep(1175, 0.12), 90);
 }
@@ -912,7 +917,7 @@ function openFile(el) {
 // What an ordinary (non-tempting) file contains when opened.
 function fileContent(name) {
   if (FUN[name]) return FUN[name];
-  if (ft && name.includes(ft.base)) return 'OUTDATED VERSION\n\nGary will not want this one.';
+  if (ft && name.includes(ft.base)) return 'OUTDATED VERSION\n\nBoss will not want this one.';
   let h = 0;
   for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   const opts = {
@@ -940,7 +945,7 @@ $('search').addEventListener('input', () => {
     el.classList.toggle('dim', !!q && !m);
   });
 });
-// Bonus for copying the exact filename out of Gary's message and pasting it into search.
+// Bonus for copying the exact filename out of Boss's message and pasting it into search.
 $('search').addEventListener('paste', e => {
   if (screen !== 'files' || !ft || ft.pasted) return;
   const text = (e.clipboardData ? e.clipboardData.getData('text') : '').trim();
@@ -964,7 +969,7 @@ const CASES = [
   { subject: 'Re: Re: Fwd: GOOSE in Synergy Room',
     thread: [
       ['Priya Nair', 'Sales', 'A goose has moved into the Synergy meeting room. It hisses at anyone who books it. I have a client call in there at three.'],
-      ['Gary Boss', 'Exec', 'Not me. Looping in the team.'],
+      ['Boss', 'Exec', 'Not me. Looping in the team.'],
       ['Dolores Finch', 'Office', 'Have you tried booking a different room?'],
       ['Priya Nair', 'Sales', 'It followed me to the other room. Who owns this?']],
     people: [
@@ -973,7 +978,7 @@ const CASES = [
       ['Ingrid Vos', 'Facilities', 'Fixes doors, lights and leaks. Holds the pest contract: insects and rodents only.'],
       ['Wendy Cho', 'HR', 'Handles complaints about hostile coworkers. The goose is not on payroll.'],
       ['Moss Abernathy', 'Grounds', 'Waters the lobby ferns. Spends weekends at a waterfowl rescue.'],
-      ['Gary Boss', 'Exec', 'Has been feeding it.']],
+      ['Boss', 'Exec', 'Has been feeding it.']],
     answer: 'Moss Abernathy',
     ai: 'The pest contract excludes birds and Security excludes non-visitors. Moss Abernathy volunteers at a waterfowl rescue. Forward to Moss Abernathy.',
     fix: 'Her name is Brenda now. I walked her to the pond. The room is yours.' },
@@ -981,7 +986,7 @@ const CASES = [
     thread: [
       ['Leo Tran', 'Research', 'The third floor coffee machine only dispenses soup now. Tomato. I pressed espresso four times.'],
       ['Raj Patel', 'IT', 'Have you tried turning it off and on again?'],
-      ['Gary Boss', 'Exec', 'Honestly an improvement. Someone handle it.'],
+      ['Boss', 'Exec', 'Honestly an improvement. Someone handle it.'],
       ['Leo Tran', 'Research', 'Off and on again. Still soup. It is hot, at least.']],
     people: [
       ['Raj Patel', 'IT', 'Fixes anything with a screen. The machine has a screen. Raj says that does not count.'],
@@ -989,7 +994,7 @@ const CASES = [
       ['Ingrid Vos', 'Facilities', 'Handles plumbing and power. The machine has both, and both are fine.'],
       ['Beatrix Lund', 'Finance', 'Pays the vending lease. Knows the vendor only as an invoice number.'],
       ['Otto Brandt', 'Cafeteria', 'Runs the lunch counter. Last week asked to borrow a hopper for the soup of the day.'],
-      ['Gary Boss', 'Exec', 'On his third cup.']],
+      ['Boss', 'Exec', 'On his third cup.']],
     answer: 'Otto Brandt',
     ai: 'The machine works; it has been filled with the wrong thing. Otto Brandt borrowed a hopper for the soup of the day. Forward to Otto Brandt.',
     fix: 'Oh no. Swapped the hoppers back. Coffee is coffee again. Sorry about the bisque.' },
@@ -997,7 +1002,7 @@ const CASES = [
     thread: [
       ['Noor Haddad', 'Customer Success', 'Every chair on floor five has been lowered to minimum height. Again. My chin is on my desk.'],
       ['Sam Okoro', 'Billing', 'Same. I raised mine yesterday. It is back down today.'],
-      ['Gary Boss', 'Exec', 'Is this a ghost thing? Adding everyone.'],
+      ['Boss', 'Exec', 'Is this a ghost thing? Adding everyone.'],
       ['Noor Haddad', 'Customer Success', 'It happens every single night. Who can make it stop?']],
     people: [
       ['Ingrid Vos', 'Facilities', 'Repairs broken chairs. These are not broken, only low.'],
@@ -1005,7 +1010,7 @@ const CASES = [
       ['Hank Morales', 'Security', 'Watches the night cameras. Reports break-ins. A person vacuuming is not a break-in.'],
       ['Pearl Okafor', 'Janitorial', 'Supervises the night crew. Their checklist: lower chair, vacuum under desk, next desk.'],
       ['Raj Patel', 'IT', 'Could automate the chairs if they were smart chairs. They are regular chairs.'],
-      ['Gary Boss', 'Exec', 'Is tall. Has not noticed.']],
+      ['Boss', 'Exec', 'Is tall. Has not noticed.']],
     answer: 'Pearl Okafor',
     ai: 'Nothing is broken, and it happens every night. The night crew lowers each chair to vacuum and the checklist never raises it. Forward to Pearl Okafor.',
     fix: 'Added "raise chair" to the night checklist. Apologies to everyone and their knees.' },
@@ -1018,9 +1023,9 @@ function face(name, staring) {
   let h = 0;
   for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   const bg = ['#bfe3ff', '#ffd9e0', '#d9f5e5', '#ffe9b8', '#e2dcff'][h % 5];
-  const hair = ['#2b2540', '#8a4b2a', '#e0a030', '#c9432f', '#6b6480'][(h >> 3) % 5];
-  const skin = ['#f6d3b3', '#d9a273', '#a86f4a', '#fbe3cf'][(h >> 6) % 4];
-  const shirt = ['#5a4fcf', '#3fb27f', '#e8546a', '#f08a3c'][(h >> 9) % 4];
+  const hair = ['#2b2540', '#8a4b2a', '#e0a030', '#c9432f', '#6b6480'][(h >>> 3) % 5];
+  const skin = ['#f6d3b3', '#d9a273', '#a86f4a', '#fbe3cf'][(h >>> 6) % 4];
+  const shirt = ['#5a4fcf', '#3fb27f', '#e8546a', '#f08a3c'][(h >>> 9) % 4];
   const r = (x, y, w, hh, fill) => '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + hh + '" fill="' + fill + '"/>';
   // drawn on a 16x16 grid so the staring version has room for very large eyes
   return '<svg viewBox="0 0 16 16" width="28" height="28" shape-rendering="crispEdges">' +
@@ -1132,32 +1137,33 @@ const POSTS = [
   ['@brenda_travels', svgPic('#bfe3ff', pr(12, 1, 2, 2, '#f6c453') + pr(0, 6, 16, 3, '#6cb6f0') + pr(0, 9, 16, 3, '#ffe9b8') + pr(4, 4, 5, 1, '#e8546a') + pr(5, 3, 3, 1, '#e8546a') + pr(6, 5, 1, 5, '#2b2540')), 'out of office :)'],
   ['@desk_lunch', svgPic('#d9f5e5', pr(5, 2, 6, 1, '#f08a3c') + pr(4, 3, 8, 2, '#f08a3c') + pr(3, 5, 10, 1, '#3fb27f') + pr(3, 6, 10, 1, '#f6c453') + pr(4, 7, 8, 1, '#8a4b2a') + pr(4, 8, 8, 2, '#f08a3c')), 'treated myself'],
   ['@sunsets_daily', svgPic('#ffb38a', pr(6, 4, 4, 4, '#f6c453') + pr(0, 8, 16, 4, '#5a4fcf') + pr(6, 9, 4, 1, '#f6c453') + pr(7, 10, 2, 1, '#f6c453')), 'no filter'],
-  ['@gary_official', svgPic('#ffd9e0', pr(8, 2, 1, 1, '#f6c453') + pr(8, 3, 1, 3, '#5a4fcf') + pr(4, 6, 8, 4, '#fffdf7') + pr(4, 6, 8, 1, '#e8546a') + pr(3, 10, 10, 1, '#2b2540')), 'happy birthday to me'],
+  ['@boss_official', svgPic('#ffd9e0', pr(8, 2, 1, 1, '#f6c453') + pr(8, 3, 1, 3, '#5a4fcf') + pr(4, 6, 8, 4, '#fffdf7') + pr(4, 6, 8, 1, '#e8546a') + pr(3, 10, 10, 1, '#2b2540')), 'happy birthday to me'],
 ];
 const DRONE = [
-  'Gary: ...so, circling back to slide 47...',
-  'Gary: ...which brings me to my earlier point...',
-  'Dolores: Gary, you are on mute.',
-  'Gary: ...can everyone see my screen?',
-  'Gary: ...as I was saying while I was on mute...',
+  'Boss: ...so, circling back to slide 47...',
+  'Boss: ...which brings me to my earlier point...',
+  'Dolores: Boss, you are on mute.',
+  'Boss: ...can everyone see my screen?',
+  'Boss: ...as I was saying while I was on mute...',
   'Raj: (typing loudly)',
-  'Gary: ...at a high level, synergy is a journey...',
-  'Gary: ...let us put a pin in that...',
-  'Gary: ...and take it offline...',
-  'Gary: ...and then circle back to the pin...',
+  'Boss: ...at a high level, synergy is a journey...',
+  'Boss: ...let us put a pin in that...',
+  'Boss: ...and take it offline...',
+  'Boss: ...and then circle back to the pin...',
   'Dolores: Sorry, go ahead. No, you go.',
-  'Gary: ...moving on to slide 48...',
-  'Gary: ...which is the same as slide 47...',
-  'Gary: ...one last thing. Actually, three things...',
-  'Gary: ...great meeting, everyone.',
+  'Boss: ...moving on to slide 48...',
+  'Boss: ...which is the same as slide 47...',
+  'Boss: ...one last thing. Actually, three things...',
+  'Boss: ...great meeting, everyone.',
 ];
 let feedWatcher = null;
 
 function drawTiles() {
   const tile = (name, cls, label, staring) => '<div class="tile ' + cls + '">' + face(name, staring) + '<span>' + label + '</span></div>';
-  const gary = mt.look === 'watch' ? tile('Gary Boss', 'watching', 'GARY IS WATCHING', true)
-    : tile('Gary Boss', mt.look === 'warn' ? 'warn' : 'speaking', 'Gary Boss', false);
-  $('tiles').innerHTML = gary + tile('Dolores Finch', '', 'Dolores Finch') + tile('Raj Patel', '', 'Raj Patel') +
+  const boss = mt.look === 'watch' ? tile('Boss', 'watching', 'BOSS IS WATCHING', true)
+    : tile('Boss', mt.look === 'warn' ? 'warn' : 'speaking', 'Boss', false);
+  $('bossCam').innerHTML = boss;
+  $('tiles').innerHTML = tile('Dolores Finch', '', 'Dolores Finch') + tile('Raj Patel', '', 'Raj Patel') +
     (mt.cam ? tile('You', '', 'You') : '<div class="tile off"><span>CAMERA ISSUES</span><span>You</span></div>');
   $('camBtn').textContent = 'CAMERA: ' + (mt.cam ? 'ON' : 'OFF');
 }
@@ -1198,19 +1204,19 @@ const FEED_TIERS = [
    ['@brenda_travels', POSTS[1][1], 'day 40. I am not coming back'],
    ['@desk_lunch', POSTS[2][1], 'this is my ninth one today'],
    ['@sunsets_daily', POSTS[3][1], 'it did not go down tonight'],
-   ['@gary_official', POSTS[4][1], 'nobody came']],
+   ['@boss_official', POSTS[4][1], 'nobody came']],
   // third lap: the pictures change
   [['@catfacts', svgPic('#ffe9b8', CAT + pr(5, 6, 1, 2, '#fffdf7') + pr(10, 6, 1, 2, '#fffdf7') + pr(7, 5, 2, 2, '#e8546a') + pr(7, 8, 2, 1, '#e8546a')), 'he knows'],
    ['@brenda_travels', svgPic('#bfe3ff', pr(12, 1, 2, 2, '#f6c453') + pr(0, 3, 16, 7, '#6cb6f0') + pr(0, 10, 16, 2, '#ffe9b8') + pr(4, 4, 5, 1, '#e8546a') + pr(5, 3, 3, 1, '#e8546a')), 'the sea is closer now'],
    ['@desk_lunch', svgPic('#d9f5e5', pr(5, 0, 6, 1, '#f08a3c') + pr(4, 1, 8, 1, '#f08a3c') + [2, 3, 4, 5, 6, 7, 8, 9].map((y, k) => pr(3 + k % 2, y, 10 - 2 * (k % 2), 1, ['#8a4b2a', '#f6c453', '#3fb27f'][k % 3])).join('') + pr(4, 10, 8, 2, '#f08a3c')), 'it keeps growing'],
    ['@sunsets_daily', svgPic('#ffb38a', pr(2, 3, 4, 4, '#f6c453') + pr(10, 3, 4, 4, '#f6c453') + pr(0, 8, 16, 4, '#5a4fcf')), 'there are two now'],
-   ['@gary_official', svgPic('#ffd9e0', [3, 5, 7, 9, 11].map(x => pr(x, 3, 1, 3, '#5a4fcf') + pr(x, 2, 1, 1, '#f6c453')).join('') + pr(2, 6, 12, 4, '#fffdf7') + pr(2, 6, 12, 1, '#e8546a') + pr(1, 10, 14, 1, '#2b2540')), 'how old am I']],
+   ['@boss_official', svgPic('#ffd9e0', [3, 5, 7, 9, 11].map(x => pr(x, 3, 1, 3, '#5a4fcf') + pr(x, 2, 1, 1, '#f6c453')).join('') + pr(2, 6, 12, 4, '#fffdf7') + pr(2, 6, 12, 1, '#e8546a') + pr(1, 10, 14, 1, '#2b2540')), 'how old am I']],
   // fourth lap onward: it is about you now
   [['@c_a_t', svgPic('#2b2540', CAT.replace('#2b2540', '#e8546a') + [[4, 5], [6, 6], [8, 5], [10, 6], [5, 8], [9, 8]].map(e => pr(e[0], e[1], 1, 1, '#fffdf7')).join('')), 'look behind your monitor'],
    ['@you', svgPic('#1c182b', pr(5, 2, 6, 7, '#f6d3b3') + pr(5, 1, 6, 2, '#8a4b2a') + pr(6, 5, 1, 1, '#2b2540') + pr(9, 5, 1, 1, '#2b2540') + pr(7, 7, 2, 1, '#c9432f') + pr(3, 9, 10, 3, '#5a4fcf')), 'this is you, right now'],
    ['@the_meeting', svgPic('#3a3355', pr(1, 1, 6, 4, '#1c182b') + pr(9, 1, 6, 4, '#1c182b') + pr(1, 7, 6, 4, '#1c182b') + pr(9, 7, 6, 4, '#3fb27f')), 'the meeting is still happening'],
    ['@feed', svgPic('#2b2540', pr(7, 1, 2, 6, '#fffdf7') + pr(5, 6, 6, 1, '#fffdf7') + pr(6, 7, 4, 1, '#fffdf7') + pr(7, 8, 2, 1, '#fffdf7')), 'there is no bottom'],
-   ['@gary_official', svgPic('#e8546a', pr(2, 3, 5, 5, '#fffdf7') + pr(9, 3, 5, 5, '#fffdf7') + pr(4, 5, 2, 2, '#2b2540') + pr(11, 5, 2, 2, '#2b2540')), 'eyes up here']],
+   ['@boss_official', svgPic('#e8546a', pr(2, 3, 5, 5, '#fffdf7') + pr(9, 3, 5, 5, '#fffdf7') + pr(4, 5, 2, 2, '#2b2540') + pr(11, 5, 2, 2, '#2b2540')), 'eyes up here']],
 ];
 
 // The feed never ends. Each lap of five posts is stranger than the last, and every post looked at counts.
@@ -1237,7 +1243,7 @@ function tickMeet() {
   if (!mt || mt.end) return;
   const now = performance.now();
   const t = (now - mt.start) / 1000;
-  // Gary's attention: looks away for a while, a short warning, then stares with big eyes.
+  // Boss's attention: looks away for a while, a short warning, then stares with big eyes.
   if (!mt.cam) {
     // He cannot see you, so he gives up checking on you.
     if (mt.look !== 'away') { mt.look = 'away'; drawTiles(); }
@@ -1250,8 +1256,8 @@ function tickMeet() {
   }
   const shown = Math.min(MEETING_SECONDS, Math.floor(t));
   $('meetClock').textContent = '00:' + String(shown).padStart(2, '0') + ' / 00:30';
-  $('caption').textContent = now < mt.excuseUntil ? (now < mt.excuseUntil - 1800 ? 'You: Sorry, my camera is having issues!' : 'Gary: ...fine. Anyway...')
-    : mt.look === 'watch' ? 'Gary: ...are we ALL paying attention?' : DRONE[Math.min(DRONE.length - 1, Math.floor(t / 2))];
+  $('caption').textContent = now < mt.excuseUntil ? (now < mt.excuseUntil - 1800 ? 'You: Sorry, my camera is having issues!' : 'Boss: ...fine. Anyway...')
+    : mt.look === 'watch' ? 'Boss: ...are we ALL paying attention?' : DRONE[Math.min(DRONE.length - 1, Math.floor(t / 2))];
   if (t >= MEETING_SECONDS) {
     mt.end = performance.now();
     clearInterval(mt.iv);
