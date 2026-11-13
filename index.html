@@ -157,7 +157,10 @@
     font-family: 'VT323', 'Courier New', monospace; font-size: 22px; line-height: 1.2;
     white-space: pre-wrap; word-break: break-word; min-height: 200px; padding: 14px 4px; user-select: text;
   }
-  .compose { flex: 1; min-width: 0; padding: 12px; background: var(--paper); }
+  .compose { flex: 1; min-width: 0; padding: 12px; background: var(--paper); position: relative; }
+  .twinkle { position: absolute; pointer-events: none; z-index: 5; animation: twinkle .7s steps(6) forwards; }
+  .twinkle svg { display: block; width: 100%; height: 100%; fill: #b3a6f5; filter: drop-shadow(1px 1px 0 #5a4fcf); }
+  @keyframes twinkle { 0% { transform: scale(0); opacity: 0; } 40% { transform: scale(1); opacity: 1; } 100% { transform: scale(.3); opacity: 0; } }
   .field { display: flex; gap: 8px; padding: 6px 0; border-bottom: 2px dashed var(--chrome-dark); font-size: 8px; }
   .field span:first-child { color: var(--chrome-dark); width: 64px; flex: none; }
   .field span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -673,7 +676,21 @@ function typeKey(key) {
 
 // The sparkle in the compose toolbar: the assistant types the rest of the email, fast and flawless,
 // with the sparkle riding along at the front of the text.
-const AI_CHARS_PER_TICK = 6;
+const AI_CHARS_PER_TICK = 2;
+// A purple sparkle that twinkles somewhere around the edge of the email, then disappears.
+function twinkle() {
+  const box = $('composeView');
+  const W = box.clientWidth, H = box.clientHeight, size = 12 + Math.floor(Math.random() * 3) * 6;
+  const edge = Math.floor(Math.random() * 4), along = Math.random(), drift = Math.random() * 26 - 6;
+  const x = edge === 0 ? drift : edge === 1 ? W - drift : along * W;
+  const y = edge === 2 ? drift : edge === 3 ? H - drift : along * H;
+  const el = document.createElement('span');
+  el.className = 'twinkle';
+  el.style.cssText = 'left:' + (x - size / 2) + 'px;top:' + (y - size / 2) + 'px;width:' + size + 'px;height:' + size + 'px';
+  el.innerHTML = '<svg viewBox="-1 -1 13 13" shape-rendering="crispEdges"><path d="M5 0h1v2h1v2h2v1h2v1H9v1H7v2H6v2H5V9H4V7H2V6H0V5h2V4h2V2h1z"/></svg>';
+  box.appendChild(el);
+  setTimeout(() => el.remove(), 700);
+}
 $('aiWrite').addEventListener('click', () => {
   if (screen !== 'mail' || !g || g.end || g.aiRunning || g.idx >= g.text.length) return;
   const game = g;
@@ -681,9 +698,11 @@ $('aiWrite').addEventListener('click', () => {
   const t0 = performance.now();
   if (!game.start) game.start = game.last = t0;
   game.ai = true; game.aiRunning = true; game.sparkle = true; game.bad = false;
+  let tick = 0;
   const iv = setInterval(() => {
     if (g !== game || screen !== 'mail') { clearInterval(iv); return; }
     const now = performance.now();
+    if (tick++ % 3 === 0) twinkle();
     game.idx = Math.min(game.text.length, game.idx + AI_CHARS_PER_TICK);
     game.last = now;
     beep(1200 + Math.random() * 300, 0.015, 'square', 0.012);
