@@ -693,17 +693,18 @@ function typeKey(key) {
   render(); hud();
 }
 
-// The sparkle in the compose toolbar: the assistant types the rest of the email, flawlessly.
+// The sparkle in the compose toolbar: the assistant writes the rest of the email instantly, flawlessly.
 $('aiWrite').addEventListener('click', () => {
   if (screen !== 'mail' || !g || g.end || g.aiRunning || g.idx >= g.text.length) return;
-  const game = g;
   setView('compose');
-  game.ai = true; game.aiRunning = true;
-  const iv = setInterval(() => {
-    if (g !== game || screen !== 'mail') { clearInterval(iv); return; }
-    typeKey(game.text[game.idx]);
-    if (game.idx >= game.text.length) { clearInterval(iv); game.aiRunning = false; }
-  }, 14);
+  const now = performance.now();
+  if (!g.start) g.start = g.last = now;
+  g.ai = true; g.bad = false;
+  g.idx = g.text.length; g.typedAt = now;
+  $('send').disabled = false;
+  $('send').classList.add('blink');
+  render();
+  [784, 988, 1319].forEach((hz, n) => setTimeout(() => beep(hz, 0.06), n * 60));
 });
 
 // Compose / Drafts switch in the sidebar. The saved draft holds the whole email, ready to copy.
@@ -729,30 +730,21 @@ $('dCopy').addEventListener('click', () => {
   else fallback();
 });
 
-// Pasting the whole draft into the compose window finishes the email in one go.
+// Pasting the whole draft into the compose window types the rest of the email out, letter by letter.
 document.addEventListener('paste', e => {
   if (screen !== 'mail' || !g || g.end || g.aiRunning || g.view !== 'compose' || g.idx >= g.text.length) return;
   const norm = t => t.replace(/\s+/g, ' ').trim();
   const text = e.clipboardData ? e.clipboardData.getData('text') : '';
   if (norm(text) !== norm(g.text)) return;
   e.preventDefault();
-  const now = performance.now();
-  if (!g.start) g.start = g.last = now;
-  g.pasted = true; g.bad = false;
-  g.idx = g.text.length; g.typedAt = now;
-  $('send').disabled = false;
-  $('send').classList.add('blink');
-  render();
-  [784, 988, 1319].forEach((hz, n) => setTimeout(() => beep(hz, 0.06), n * 60));
+  const game = g;
+  game.pasted = true; game.bad = false; game.aiRunning = true;
+  const iv = setInterval(() => {
+    if (g !== game || screen !== 'mail') { clearInterval(iv); return; }
+    typeKey(game.text[game.idx]);
+    if (game.idx >= game.text.length) { clearInterval(iv); game.aiRunning = false; }
+  }, 14);
 });
-
-function send() {
-  if (!g || g.idx < g.text.length || g.end) return;
-  g.end = performance.now();
-  clearInterval(ticker);
-  [523, 659, 784].forEach((f, n) => setTimeout(() => beep(f, 0.1), n * 90));
-  celebrate('EMAIL SENT', () => buffer(startFiles));
-}
 
 /* ---------- task 2: file hunt ---------- */
 const BASES = ['Q3_Budget', 'Synergy_Deck', 'Invoice_0042', 'Meeting_Notes', 'Fridge_Policy', 'Performance_Review',
